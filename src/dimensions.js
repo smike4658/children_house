@@ -115,13 +115,6 @@ function createDimensions() {
   ));
 
 
-  // Vyska zabradli
-  g.add(makeDimLine(
-    new THREE.Vector3(-hw, CONFIG.H1, -hd),
-    new THREE.Vector3(-hw, CONFIG.H1 + CONFIG.RAIL_H, -hd),
-    new THREE.Vector3(0, 0, -0.6),
-    '90 cm'
-  ));
 
   g.visible = false;
   return g;

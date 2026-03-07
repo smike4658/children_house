@@ -6,15 +6,7 @@ function createBeams() {
   const B = CONFIG.BEAM;
   const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
 
-  // Horní rámy po obvodu na výšce H2 = CONFIG.H
-  const H2 = CONFIG.H;
-  // přední (zadní odstraněn)
-  [hd].forEach(z => {
-    const m = box(CONFIG.W, B, B, MAT.beam);
-    m.position.set(0, H2, z);
-    g.add(m);
-  });
-  // levý a pravý trám odstraněny
+  // Horní rámy po obvodu na výšce H2 = CONFIG.H odstraněny
 
   // Stropní nosníky pod podlahou 2. patra (joists)
   for (let i = 0; i < 4; i++) {
