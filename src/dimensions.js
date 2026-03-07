@@ -76,13 +76,6 @@ function createDimensions() {
     '242 cm'
   ));
 
-  // Vyska 1. patra (posunuto dal, aby neprocházelo stitem)
-  g.add(makeDimLine(
-    new THREE.Vector3(-hw, 0, -hd),
-    new THREE.Vector3(-hw, CONFIG.H1, -hd),
-    new THREE.Vector3(-0.5, 0, -0.5),
-    '150 cm'
-  ));
 
   // Celkova vyska po okap (posunuto dal)
   g.add(makeDimLine(

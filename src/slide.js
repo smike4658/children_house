@@ -24,8 +24,8 @@ function createSlide() {
   // Negative rotation.x tilts -Z end downward (away from house toward lawn)
   slideGroup.rotation.x = -slideAngle;
 
-  // Pivot at top of slide: right corner from camera view (world -X, camera at +6)
-  slideGroup.position.set(hw - CONFIG.SLIDE_W / 2, CONFIG.H1, -hd);
+  // Pivot at top of slide: vlevo z pohledu na terasu zepředu (-X)
+  slideGroup.position.set(-hw + CONFIG.SLIDE_W / 2 + 0.1, CONFIG.H1, -hd);
 
   g.add(slideGroup);
   return g;

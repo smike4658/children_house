@@ -1160,8 +1160,7 @@ function createRailing() {
   }
   // Top rail
   addRail(-hw, zFront, hw, zFront, baseY + RH - RT / 2);
-  // Mid rail
-  addRail(-hw, zFront, hw, zFront, baseY + RH / 2);
+  // Střední tyčka odstraněna
 
   // Levé zábradlí (-X strana terasy)
   const xLeft = -hw;
@@ -1202,8 +1201,8 @@ function createSlide() {
   // Negative rotation.x tilts -Z end downward (away from house toward lawn)
   slideGroup.rotation.x = -slideAngle;
 
-  // Pivot at top of slide: right corner from camera view (world -X, camera at +6)
-  slideGroup.position.set(hw - CONFIG.SLIDE_W / 2, CONFIG.H1, -hd);
+  // Pivot at top of slide: vlevo z pohledu na terasu zepředu (-X)
+  slideGroup.position.set(-hw + CONFIG.SLIDE_W / 2 + 0.1, CONFIG.H1, -hd);
 
   g.add(slideGroup);
   return g;
@@ -1380,13 +1379,6 @@ function createDimensions() {
     '242 cm'
   ));
 
-  // Vyska 1. patra (posunuto dal, aby neprocházelo stitem)
-  g.add(makeDimLine(
-    new THREE.Vector3(-hw, 0, -hd),
-    new THREE.Vector3(-hw, CONFIG.H1, -hd),
-    new THREE.Vector3(-0.5, 0, -0.5),
-    '150 cm'
-  ));
 
   // Celkova vyska po okap (posunuto dal)
   g.add(makeDimLine(

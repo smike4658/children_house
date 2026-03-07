@@ -34,8 +34,7 @@ function createRailing() {
   }
   // Top rail
   addRail(-hw, zFront, hw, zFront, baseY + RH - RT / 2);
-  // Mid rail
-  addRail(-hw, zFront, hw, zFront, baseY + RH / 2);
+  // Střední tyčka odstraněna
 
   // Levé zábradlí (-X strana terasy)
   const xLeft = -hw;
