@@ -63,10 +63,8 @@
     color: #d4c9a8; cursor: pointer; pointer-events: all; display: none; }
   #print-btn:hover { background: #2a3022; }
 
-  /* 2D view hidden by default */
-  #view-2d-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none;
-    align-items: center; justify-content: center; pointer-events: none; }
-  #view-2d-overlay svg { pointer-events: none; }
+  /* Canvas overlay pro kóty a popisky 2D pohledů */
+  #dim-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
 
   @media print {
     #ui { display: none; }
@@ -133,6 +131,9 @@
 
   <!-- Print button (2D only) -->
   <button id="print-btn" onclick="window.print()">Tisk / Export</button>
+
+  <!-- Kóty a popisky pro 2D pohledy -->
+  <canvas id="dim-canvas"></canvas>
 </div>
 
 <!-- Three.js CDN -->
@@ -156,6 +157,7 @@ const CONFIG = {
   H1: 1.50,
   TD: 0.70,
   get CD() { return this.D - this.TD; },  // 1.72
+  get divZ() { return -this.D/2 + this.TD; }, // Z přední stěny kabiny ≈ -0.51
   POST: 0.12,
   WALL_T: 0.04,
   BEAM: 0.07,
@@ -190,6 +192,7 @@ const COLORS = {
   concrete: '#999999',
   grass:    '#4a7a2e',
   sky:      '#87CEEB',
+  glass:    '#a0d0e8',
 };
 
 // ============================================================
@@ -287,6 +290,7 @@ function setupFallbackSky() {
   const tex = new THREE.CanvasTexture(canvas);
   tex.mapping = THREE.EquirectangularReflectionMapping;
   scene.background = tex;
+  scene.environment = tex; // PBR ambient z gradientu oblohy
 }
 
 // ============================================================
@@ -435,7 +439,7 @@ function createGround() {
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.repeat.set(8, 8);
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(25, 25),
+    new THREE.PlaneGeometry(40, 40),
     new THREE.MeshStandardMaterial({ map: tex, roughness: 1.0 })
   );
   ground.rotation.x = -Math.PI / 2;
@@ -463,6 +467,14 @@ function box(w, h, d, mat, castShadow=true, receiveShadow=true) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
   m.castShadow = castShadow;
   m.receiveShadow = receiveShadow;
+  return m;
+}
+
+// Shorthand: vytvoř box, nastav pozici, přidej do skupiny
+function ab(group, w, h, d, mat, x, y, z) {
+  const m = box(w, h, d, mat);
+  m.position.set(x, y, z);
+  group.add(m);
   return m;
 }
 
@@ -514,7 +526,7 @@ function createPosts() {
   });
 
   // divZ = pozice přední stěny kabiny = -hd + CONFIG.TD
-  const divZ = -hd + CONFIG.TD;
+  const divZ = CONFIG.divZ;
   // 2 dělicí sloupky terasa/kabina, od H1 výš
   const cabinH = CONFIG.H - CONFIG.H1 + CONFIG.ROOF_PEAK;
   [-hw, hw].forEach(x => {
@@ -566,7 +578,7 @@ function createBeams() {
   }
 
   // Rám přední stěny kabiny
-  const divZ = -hd + CONFIG.TD;
+  const divZ = CONFIG.divZ;
   const cabinH = CONFIG.H - CONFIG.H1;
   const m = box(CONFIG.W, B, B, MAT.beam);
   m.position.set(0, CONFIG.H1 + cabinH/2, divZ);
@@ -687,7 +699,7 @@ function createWalls() {
   const g = new THREE.Group(); g.name = 'walls';
   const T = CONFIG.WALL_T;
   const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
-  const divZ = -hd + CONFIG.TD;
+  const divZ = CONFIG.divZ;
 
   // === Zadní stěna (+Z) — plná, celá výška (1. + 2. patro) ===
   const backWall = box(CONFIG.W, CONFIG.H, T, MAT.walls);
@@ -800,7 +812,7 @@ function addDoorFrame(g, x, y, z, w, h, depth) {
 function createRoof() {
   const g = new THREE.Group(); g.name = 'roof';
   const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
-  const divZ = -hd + CONFIG.TD;
+  const divZ = CONFIG.divZ;
   const OH = CONFIG.ROOF_OVERHANG;
   const T = 0.06; // tloušťka střešního pláště
 
@@ -848,7 +860,7 @@ function createRoof() {
 function createRailing() {
   const g = new THREE.Group(); g.name = 'railing';
   const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
-  const divZ = -hd + CONFIG.TD;
+  const divZ = CONFIG.divZ;
   const RH = CONFIG.RAIL_H;
   const RT = CONFIG.RAIL_T;
   const baseY = CONFIG.H1 + 0.06; // on top of 2nd floor
@@ -1024,26 +1036,78 @@ function createLabels() {
 }
 
 // ============================================================
-// 2D Dimension lines (SVG overlay for 2D views)
+// 2D Kóty a popisky — canvas overlay s world-to-screen projekcí
 // ============================================================
-function getDimensionsSVG(view) {
-  const w = window.innerWidth, h = window.innerHeight;
-  const pad = 60;
-  const lines = [];
+function drawDimensions(view) {
+  const cv = document.getElementById('dim-canvas');
+  cv.width = window.innerWidth; cv.height = window.innerHeight;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.strokeStyle = '#8a9a72'; ctx.fillStyle = '#d4c9a8';
+  ctx.lineWidth = 1; ctx.font = '12px Segoe UI, sans-serif';
 
-  function dimLine(x1, y1, x2, y2, label, above = true) {
-    const oy = above ? -18 : 18;
-    lines.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#8a9a72" stroke-width="1" stroke-dasharray="4,3"/>`);
-    lines.push(`<text x="${(x1+x2)/2}" y="${(y1+y2)/2+oy}" fill="#d4c9a8" font-size="11" text-anchor="middle" font-family="Segoe UI,sans-serif">${label}</text>`);
+  // Převod world souřadnic na screen
+  function ws(wx, wy, wz) {
+    const v = new THREE.Vector3(wx, wy, wz ?? 0);
+    v.project(activeCamera);
+    return { x: (v.x + 1) / 2 * cv.width, y: (1 - v.y) / 2 * cv.height };
+  }
+
+  // Horizontální kóta
+  function dimH(wx1, wx2, wy, wz, label) {
+    const a = ws(wx1, wy, wz), b = ws(wx2, wy, wz);
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    ctx.setLineDash([]);
+    const tw = ctx.measureText(label).width;
+    ctx.fillText(label, (a.x + b.x) / 2 - tw / 2, a.y - 6);
+  }
+
+  // Vertikální kóta
+  function dimV(wx, wy1, wy2, wz, label) {
+    const a = ws(wx, wy1, wz), b = ws(wx, wy2, wz);
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.save();
+    ctx.translate(a.x + 18, (a.y + b.y) / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText(label, -ctx.measureText(label).width / 2, 0);
+    ctx.restore();
+  }
+
+  // Popisek
+  function lbl(wx, wy, wz, text) {
+    const p = ws(wx, wy, wz);
+    ctx.fillText(text, p.x, p.y);
   }
 
   if (view === 'front') {
-    // Simple dimension indicators
-    dimLine(pad, h-pad, w-pad, h-pad, '310 cm');
-    dimLine(pad, pad, pad, h-pad, '300 cm', false);
+    dimH(-CONFIG.W/2, CONFIG.W/2, -0.35, -CONFIG.D/2, '310 cm šířka');
+    dimV(-CONFIG.W/2 - 0.4, 0, CONFIG.H1, 0, '150 cm');
+    dimV(-CONFIG.W/2 - 0.4, CONFIG.H1, CONFIG.H, 0, '150 cm');
+    lbl(0, 0.75, -CONFIG.D/2, 'PŘÍZEMÍ (otevřeno)');
+    lbl(0, 2.25, -CONFIG.D/2, '2. PATRO');
+    lbl(CONFIG.divZ, CONFIG.H1 + 0.5, -CONFIG.D/2 + 0.1, 'TERASA');
+  } else if (view === 'side') {
+    dimV(-CONFIG.D/2 - 0.4, 0, CONFIG.H1, null, '150');
+    dimV(-CONFIG.D/2 - 0.4, CONFIG.H1, CONFIG.H, null, '150');
+    dimH(-CONFIG.D/2, CONFIG.divZ, -0.35, null, '70 terasa');
+    dimH(CONFIG.divZ, CONFIG.D/2, -0.35, null, '172 kabina');
+    lbl(0, CONFIG.H + 0.2, null, '300 cm (+45 hřeben)');
+  } else if (view === 'floor1') {
+    dimH(-CONFIG.W/2, CONFIG.W/2, CONFIG.D/2 + 0.35, 0, '310 cm šířka');
+    dimV(CONFIG.W/2 + 0.35, -CONFIG.D/2, CONFIG.D/2, 0, '242 cm hloubka');
+    lbl(0, 0.2, 0, 'PŘÍZEMÍ — otevřeno vpředu (-Z) a vlevo (-X)');
+  } else if (view === 'floor2') {
+    dimH(-CONFIG.W/2, CONFIG.W/2, CONFIG.D/2 + 0.35, 0, '310 cm šířka');
+    lbl(0, CONFIG.H1 + 0.2, -CONFIG.D/2 + CONFIG.TD/2, 'TERASA (70 cm)');
+    lbl(0, CONFIG.H1 + 0.2, CONFIG.divZ + CONFIG.CD/2, 'KABINA (172 cm)');
+  } else if (view === 'section') {
+    ctx.fillText('ŘEZ — pohled zprava (X=0)', 20, 30);
+    ctx.fillText(`Podlaha 2. patra: ${CONFIG.H1 * 100 | 0} cm`, 20, 50);
+    ctx.fillText(`Výška hřebene: ${(CONFIG.H + CONFIG.ROOF_PEAK) * 100 | 0} cm`, 20, 70);
   }
-
-  return `<svg width="${w}" height="${h}" style="position:absolute;top:0;left:0;pointer-events:none">${lines.join('')}</svg>`;
 }
 
 // ============================================================
@@ -1062,6 +1126,7 @@ function switchView(view) {
   document.getElementById('toggles').style.display = is3D ? 'flex' : 'none';
   document.getElementById('print-btn').style.display = is3D ? 'none' : 'block';
   document.getElementById('controls-hint').style.display = is3D ? 'block' : 'none';
+  document.getElementById('dim-canvas').style.display = is3D ? 'none' : 'block';
 
   const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
   const H = CONFIG.H + CONFIG.ROOF_PEAK;
@@ -1079,12 +1144,21 @@ function switchView(view) {
       new THREE.Vector3(0, 0, 0),
       -hw - pad, hw + pad, hd + pad, -hd - pad
     );
+    // Zobrazit pouze 1. patro (y = 0 až H1)
+    // Kamera je na y=10, takže near=10-H1, far=10+0.1
+    orthoCamera.near = 10 - CONFIG.H1 - 0.05;
+    orthoCamera.far  = 10.15;
+    orthoCamera.updateProjectionMatrix();
   } else if (view === 'floor2') {
     setupOrthoView(
       new THREE.Vector3(0, 10, 0),
       new THREE.Vector3(0, 0, 0),
       -hw - pad, hw + pad, hd + pad, -hd - pad
     );
+    // Zobrazit pouze 2. patro (y = H1 až H+ROOF_PEAK)
+    orthoCamera.near = 10 - CONFIG.H - CONFIG.ROOF_PEAK - 0.3;
+    orthoCamera.far  = 10 - CONFIG.H1 + 0.15;
+    orthoCamera.updateProjectionMatrix();
   } else if (view === 'front') {
     setupOrthoView(
       new THREE.Vector3(0, H/2, -10),
@@ -1105,6 +1179,9 @@ function switchView(view) {
     );
     sectionPlane.constant = 0; // Clip at X=0
   }
+
+  // Kreslit kóty a popisky po dokončení přechodu kamery
+  if (!is3D) setTimeout(() => drawDimensions(view), 50);
 }
 
 let sectionPlane;
@@ -1349,6 +1426,13 @@ window.addEventListener('resize', () => {
 });
 
 // ============================================================
+// Axis Indicator — XYZ osa v pravém dolním rohu (3D mód)
+// ============================================================
+const axisScene = new THREE.Scene();
+axisScene.add(new THREE.AxesHelper(0.8));
+const axisCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 10);
+
+// ============================================================
 // Animation loop
 // ============================================================
 function animate() {
@@ -1358,6 +1442,22 @@ function animate() {
     try { composer.render(); } catch(e) { composerFailed = true; renderer.render(scene, activeCamera); }
   } else {
     renderer.render(scene, activeCamera);
+  }
+
+  // Axis indicator — renderujeme jen v 3D módu
+  if (currentView === '3d') {
+    const s = 90;
+    const x = window.innerWidth - s - 12;
+    const y = 12;
+    renderer.setViewport(x, y, s, s);
+    renderer.setScissor(x, y, s, s);
+    renderer.setScissorTest(true);
+    axisCamera.position.copy(perspCamera.position).sub(orbitTarget).normalize().multiplyScalar(3);
+    axisCamera.lookAt(0, 0, 0);
+    axisCamera.up.copy(perspCamera.up);
+    renderer.render(axisScene, axisCamera);
+    renderer.setScissorTest(false);
+    renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
   }
 }
 
