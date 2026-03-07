@@ -58,6 +58,7 @@ function createDimensions() {
   const g = new THREE.Group();
   g.name = 'dimensions';
   const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+  const divZ = -hd + CONFIG.TD;
 
   // Celkova sirka (dole, predni strana)
   g.add(makeDimLine(
@@ -100,7 +101,6 @@ function createDimensions() {
   ));
 
   // Terasa vs kabina (prava strana, uroven 2. patra)
-  const divZ = -hd + CONFIG.TD;
   g.add(makeDimLine(
     new THREE.Vector3(hw, CONFIG.H1, -hd),
     new THREE.Vector3(hw, CONFIG.H1, divZ),
