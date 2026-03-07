@@ -152,6 +152,29 @@ Osa Z = hloubka (přední/trávník = -Z, zadní = +Z)
 Střed modelu: [0, 0, 0] = střed půdorysu na úrovni země
 ```
 
+## Kamera reference — výchozí ISO pohled
+
+Výchozí kamera je na pozici `(6, 4, -6)`, dívá se na `(0, 1.5, 0)`.
+
+```
+Z výchozího ISO pohledu:
+
+  Na obrazovce VPRAVO  →  svět +X  (pravá stěna, okno)
+  Na obrazovce VLEVO   →  svět -X  (levá stěna, žebřík)
+  Na obrazovce VZADU   →  svět +Z  (zadní stěna)
+  Na obrazovce VPŘEDU  →  svět -Z  (terasa, trávník, klouzačka)
+  NAHORU               →  svět +Y  (výška)
+```
+
+**Axis indicator v 3D view:** V pravém dolním rohu je vždy viditelná XYZ osa:
+- 🔴 červená = X (šířka)
+- 🟢 zelená = Y (výška)
+- 🔵 modrá = Z (hloubka)
+
+**Jak popisovat opravy:**
+Místo "klouzačka je na špatné straně" piš "klouzačka má být na +X straně (vpravo na obrazovce)".
+Místo "otočená do domečku" piš "má směřovat do -Z (vpředu/trávník)".
+
 ## Layout (pohled shora, -Y)
 
 ```
