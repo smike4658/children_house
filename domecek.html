@@ -783,20 +783,7 @@ function createBeams() {
   const B = CONFIG.BEAM;
   const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
 
-  // Horní rámy po obvodu na výšce H2 = CONFIG.H
-  const H2 = CONFIG.H;
-  // přední, zadní
-  [-hd, hd].forEach(z => {
-    const m = box(CONFIG.W, B, B, MAT.beam);
-    m.position.set(0, H2, z);
-    g.add(m);
-  });
-  // levý, pravý
-  [-hw, hw].forEach(x => {
-    const m = box(B, B, CONFIG.D, MAT.beam);
-    m.position.set(x, H2, 0);
-    g.add(m);
-  });
+  // Horní rámy po obvodu na výšce H2 = CONFIG.H odstraněny
 
   // Stropní nosníky pod podlahou 2. patra (joists)
   for (let i = 0; i < 4; i++) {
@@ -1430,21 +1417,7 @@ function createDimensions() {
     '172 cm'
   ));
 
-  // Vyska dveri
-  g.add(makeDimLine(
-    new THREE.Vector3(-CONFIG.DOOR_W / 2 + CONFIG.DOOR_OFFSET_X, CONFIG.H1, divZ),
-    new THREE.Vector3(-CONFIG.DOOR_W / 2 + CONFIG.DOOR_OFFSET_X, CONFIG.H1 + CONFIG.DOOR_H, divZ),
-    new THREE.Vector3(0, 0, -0.25),
-    '110 cm'
-  ));
 
-  // Vyska zabradli
-  g.add(makeDimLine(
-    new THREE.Vector3(-hw, CONFIG.H1, -hd),
-    new THREE.Vector3(-hw, CONFIG.H1 + CONFIG.RAIL_H, -hd),
-    new THREE.Vector3(0, 0, -0.6),
-    '90 cm'
-  ));
 
   g.visible = false;
   return g;
