@@ -2,7 +2,7 @@
 // Toggles
 // ============================================================
 let wireframeOn = false;
-let labelsOn = true;
+let labelsOn = false;
 
 document.getElementById('toggle-wire').addEventListener('click', function () {
   wireframeOn = !wireframeOn;
