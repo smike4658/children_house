@@ -93,8 +93,8 @@ function createDimensions() {
 
   // Prevyseni strechy
   g.add(makeDimLine(
-    new THREE.Vector3(-hw, CONFIG.H, hd),
-    new THREE.Vector3(-hw, CONFIG.H + CONFIG.ROOF_PEAK, hd),
+    new THREE.Vector3(-hw, CONFIG.H, divZ),
+    new THREE.Vector3(-hw, CONFIG.H + CONFIG.ROOF_PEAK, divZ),
     new THREE.Vector3(-0.9, 0, 0.3),
     '+45 cm'
   ));

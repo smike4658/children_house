@@ -29,7 +29,7 @@ function createRoof() {
   [-1, 1].forEach(side => {
     const m = box(CONFIG.W + OH * 2 + bargeT * 2, bargeT, bargeT, MAT.roofEdge, false, false);
     m.position.set(0,
-      side === -1 ? H2 - bargeT / 2 : HP - bargeT / 2,
+      side === -1 ? HP - bargeT / 2 : H2 - bargeT / 2, // side -1 (vpředu kabiny) je vysoko, side 1 (vzadu) nízko
       side === -1 ? divZ - OH : hd + OH
     );
     g.add(m);
