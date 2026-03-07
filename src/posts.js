@@ -22,8 +22,8 @@ function createPosts() {
     g.add(m);
   });
 
-  // 2 střední sloupky (přední terasa + zadní)
-  [[-hd, H_front], [hd, H_back]].forEach(([z, h]) => {
+  // 1 střední sloupek (pouze přední terasa, zadní odstraněn)
+  [[-hd, H_front]].forEach(([z, h]) => {
     const ph = h - FH;
     const m = box(P * 0.85, ph, P * 0.85, MAT.posts);
     m.position.set(0, FH + ph / 2, z);
