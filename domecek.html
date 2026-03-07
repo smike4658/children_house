@@ -107,13 +107,13 @@
     <div class="legend-item"><div class="legend-dot" style="background:#A0784C"></div>Podlahy</div>
     <div class="legend-item"><div class="legend-dot" style="background:#6B3A2A"></div>Střecha</div>
     <div class="legend-item"><div class="legend-dot" style="background:#D4A056"></div>Zábradlí</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#E85D75"></div>Klouzačka</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#FFD700"></div>Klouzačka</div>
     <div class="legend-item"><div class="legend-dot" style="background:#5B8C3E"></div>Žebřík</div>
     <div class="legend-item"><div class="legend-dot" style="background:#999999"></div>Betonové patky</div>
   </div>
 
   <!-- Controls hint -->
-  <div id="controls-hint" id="hint-3d">Levé tl.: otáčení &nbsp;|&nbsp; Pravé tl.: posun &nbsp;|&nbsp; Kolečko: zoom &nbsp;|&nbsp; Dotyk: 1 prst otáčení, 2 prsty zoom</div>
+  <div id="controls-hint">Levé tl.: otáčení &nbsp;|&nbsp; Pravé tl.: posun &nbsp;|&nbsp; Kolečko: zoom &nbsp;|&nbsp; Dotyk: 1 prst otáčení, 2 prsty zoom</div>
 
   <!-- View presets (3D only) -->
   <div id="view-presets">
@@ -184,7 +184,7 @@ const COLORS = {
   roof:     '#6B3A2A',
   roofEdge: '#4A2818',
   railing:  '#D4A056',
-  slide:    '#E85D75',
+  slide:    '#FFD700',
   ladder:   '#5B8C3E',
   frame:    '#f0e8d0',
   concrete: '#999999',
@@ -218,13 +218,6 @@ perspCamera.lookAt(0, 1.5, 0);
 let orthoCamera = null;
 let activeCamera = perspCamera;
 let currentView = '3d';
-
-function makeOrthoCamera(left, right, top, bottom, pos, target) {
-  const cam = new THREE.OrthographicCamera(left, right, top, bottom, 0.01, 100);
-  cam.position.copy(pos);
-  cam.lookAt(target || new THREE.Vector3(0, 0, 0));
-  return cam;
-}
 
 // ============================================================
 // Lighting
@@ -411,7 +404,7 @@ function setupMaterials() {
   MAT.frame = new THREE.MeshStandardMaterial({ color: COLORS.frame, roughness: 0.7 });
   MAT.glass = new THREE.MeshStandardMaterial({ color: 0xaad4f5, transparent: true, opacity: 0.4, roughness: 0.1, metalness: 0.1 });
   MAT.concrete = new THREE.MeshStandardMaterial({ color: COLORS.concrete, roughness: 0.9 });
-  MAT.beam = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.8 });
+  MAT.beam = MAT.posts; // same texture and roughness
 }
 
 // ============================================================
@@ -609,23 +602,29 @@ function createFloors() {
 // Helper: stěna s otvorem (okno/dveře)
 function wallWithHole(totalW, totalH, holeX, holeY, holeW, holeH, mat, depth) {
   const g = new THREE.Group();
+  const leftEdge = -totalW / 2;
+  const rightEdge = totalW / 2;
+  const holeLeft = holeX - holeW / 2;
+  const holeRight = holeX + holeW / 2;
+  const holeTop = holeY + holeH / 2;
+  const holeBottom = holeY - holeH / 2;
   const segments = [
     // vlevo od otvoru
-    { x: (holeX - totalW/2 - holeW/2)/2 + (holeX - totalW/2)/2,
-      w: holeX - totalW/2 - holeW/2,
-      y: totalH/2, h: totalH },
+    { x: (leftEdge + holeLeft) / 2,
+      w: holeLeft - leftEdge,
+      y: totalH / 2, h: totalH },
     // vpravo od otvoru
-    { x: (holeX + holeW/2 + totalW/2)/2,
-      w: totalW/2 - holeX - holeW/2,
-      y: totalH/2, h: totalH },
+    { x: (holeRight + rightEdge) / 2,
+      w: rightEdge - holeRight,
+      y: totalH / 2, h: totalH },
     // nad otvorem
     { x: holeX, w: holeW,
-      y: (holeY + holeH/2 + totalH)/2,
-      h: totalH - holeY - holeH/2 },
+      y: (holeTop + totalH) / 2,
+      h: totalH - holeTop },
     // pod otvorem
     { x: holeX, w: holeW,
-      y: holeY - holeH/2 - (holeY - holeH/2)/2,
-      h: holeY - holeH/2 },
+      y: holeBottom / 2,
+      h: holeBottom },
   ];
   segments.forEach(s => {
     if (s.w <= 0.001 || s.h <= 0.001) return;
@@ -691,7 +690,6 @@ function createWalls() {
   const divZ = -hd + CONFIG.TD;
 
   // === Zadní stěna (+Z) — plná, celá výška (1. + 2. patro) ===
-  const backH = CONFIG.H + CONFIG.ROOF_PEAK * 0.5; // approximate to roof base
   const backWall = box(CONFIG.W, CONFIG.H, T, MAT.walls);
   backWall.position.set(0, CONFIG.H/2, hd + T/2);
   g.add(backWall);
@@ -922,8 +920,8 @@ function createSlide() {
   // Negative rotation.x tilts -Z end downward (away from house toward lawn)
   slideGroup.rotation.x = -slideAngle;
 
-  // Pivot at top of slide: right front corner of terrace
-  slideGroup.position.set(hw - CONFIG.SLIDE_W / 2, CONFIG.H1, -hd);
+  // Pivot at top of slide: right corner from camera view (world -X, camera at +6)
+  slideGroup.position.set(-hw + CONFIG.SLIDE_W / 2, CONFIG.H1, -hd);
 
   g.add(slideGroup);
   return g;
@@ -1034,9 +1032,9 @@ function getDimensionsSVG(view) {
   const lines = [];
 
   function dimLine(x1, y1, x2, y2, label, above = true) {
-    const ox = above ? 0 : 0, oy = above ? -18 : 18;
+    const oy = above ? -18 : 18;
     lines.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#8a9a72" stroke-width="1" stroke-dasharray="4,3"/>`);
-    lines.push(`<text x="${(x1+x2)/2+ox}" y="${(y1+y2)/2+oy}" fill="#d4c9a8" font-size="11" text-anchor="middle" font-family="Segoe UI,sans-serif">${label}</text>`);
+    lines.push(`<text x="${(x1+x2)/2}" y="${(y1+y2)/2+oy}" fill="#d4c9a8" font-size="11" text-anchor="middle" font-family="Segoe UI,sans-serif">${label}</text>`);
   }
 
   if (view === 'front') {
@@ -1069,47 +1067,43 @@ function switchView(view) {
   const H = CONFIG.H + CONFIG.ROOF_PEAK;
   const pad = 1.5;
 
+  sectionPlane.constant = 1000; // default: no clipping
+
   if (view === '3d') {
     activeCamera = perspCamera;
     // Show all
     playhouse.traverse(c => { if (c.isMesh) c.visible = true; });
-    sectionPlane.constant = 1000;
   } else if (view === 'floor1') {
     setupOrthoView(
       new THREE.Vector3(0, 10, 0),
       new THREE.Vector3(0, 0, 0),
       -hw - pad, hw + pad, hd + pad, -hd - pad
     );
-    sectionPlane.constant = 1000;
   } else if (view === 'floor2') {
     setupOrthoView(
       new THREE.Vector3(0, 10, 0),
       new THREE.Vector3(0, 0, 0),
       -hw - pad, hw + pad, hd + pad, -hd - pad
     );
-    sectionPlane.constant = 1000;
   } else if (view === 'front') {
     setupOrthoView(
       new THREE.Vector3(0, H/2, -10),
       new THREE.Vector3(0, H/2, 0),
       -hw - pad, hw + pad, H + pad, -pad
     );
-    sectionPlane.constant = 1000;
   } else if (view === 'side') {
     setupOrthoView(
       new THREE.Vector3(10, H/2, 0),
       new THREE.Vector3(0, H/2, 0),
       -hd - pad, hd + pad, H + pad, -pad
     );
-    sectionPlane.constant = 1000;
   } else if (view === 'section') {
     setupOrthoView(
       new THREE.Vector3(10, H/2, 0),
       new THREE.Vector3(0, H/2, 0),
       -hd - pad, hd + pad, H + pad, -pad
     );
-    // Clip at X=0
-    sectionPlane.constant = 0;
+    sectionPlane.constant = 0; // Clip at X=0
   }
 }
 
@@ -1153,6 +1147,10 @@ const orbitTarget = new THREE.Vector3(0, 1.5, 0);
 let isDragging = false, isRightDrag = false;
 let lastMouse = { x: 0, y: 0 };
 let spherical = new THREE.Spherical();
+// Pre-allocated vectors to avoid GC pressure in event handlers
+const _orbitPos = new THREE.Vector3();
+const _orbitRight = new THREE.Vector3();
+const _orbitDir = new THREE.Vector3();
 
 function updateOrbit() {
   const offset = perspCamera.position.clone().sub(orbitTarget);
@@ -1174,29 +1172,28 @@ window.addEventListener('mousemove', e => {
   lastMouse = { x: e.clientX, y: e.clientY };
   if (isRightDrag) {
     // Pan
-    const right = new THREE.Vector3().crossVectors(
-      perspCamera.getWorldDirection(new THREE.Vector3()),
+    _orbitRight.crossVectors(
+      perspCamera.getWorldDirection(_orbitDir),
       perspCamera.up
     ).normalize();
-    const up = perspCamera.up.clone();
     const dist = perspCamera.position.distanceTo(orbitTarget);
-    orbitTarget.addScaledVector(right, -dx * 0.003 * dist * 0.5);
-    orbitTarget.addScaledVector(up, dy * 0.003 * dist * 0.5);
+    orbitTarget.addScaledVector(_orbitRight, -dx * 0.003 * dist * 0.5);
+    orbitTarget.addScaledVector(perspCamera.up, dy * 0.003 * dist * 0.5);
   } else {
     spherical.theta -= dx * 0.008;
     spherical.phi -= dy * 0.008;
     spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
   }
-  const pos = new THREE.Vector3().setFromSpherical(spherical).add(orbitTarget);
-  perspCamera.position.copy(pos);
+  _orbitPos.setFromSpherical(spherical).add(orbitTarget);
+  perspCamera.position.copy(_orbitPos);
   perspCamera.lookAt(orbitTarget);
 });
 renderer.domElement.addEventListener('wheel', e => {
   if (currentView !== '3d') return;
   spherical.radius *= (1 + e.deltaY * 0.001);
   spherical.radius = Math.max(1, Math.min(20, spherical.radius));
-  const pos = new THREE.Vector3().setFromSpherical(spherical).add(orbitTarget);
-  perspCamera.position.copy(pos);
+  _orbitPos.setFromSpherical(spherical).add(orbitTarget);
+  perspCamera.position.copy(_orbitPos);
   perspCamera.lookAt(orbitTarget);
 });
 
@@ -1213,16 +1210,16 @@ renderer.domElement.addEventListener('touchmove', e => {
     spherical.theta -= dx * 0.008;
     spherical.phi -= dy * 0.008;
     spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
-    const pos = new THREE.Vector3().setFromSpherical(spherical).add(orbitTarget);
-    perspCamera.position.copy(pos);
+    _orbitPos.setFromSpherical(spherical).add(orbitTarget);
+    perspCamera.position.copy(_orbitPos);
     perspCamera.lookAt(orbitTarget);
   } else if (t.length === 2 && touches.length === 2) {
     const prevDist = Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
     const currDist = Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
     spherical.radius *= prevDist / currDist;
     spherical.radius = Math.max(1, Math.min(20, spherical.radius));
-    const pos = new THREE.Vector3().setFromSpherical(spherical).add(orbitTarget);
-    perspCamera.position.copy(pos);
+    _orbitPos.setFromSpherical(spherical).add(orbitTarget);
+    perspCamera.position.copy(_orbitPos);
     perspCamera.lookAt(orbitTarget);
   }
   touches = t;
@@ -1266,6 +1263,7 @@ document.querySelectorAll('.vbtn').forEach(btn => {
 // ============================================================
 // Post-processing (SSAO)
 // ============================================================
+let composerFailed = false;
 function setupPostProcessing() {
   try {
     if (typeof THREE.EffectComposer === 'undefined') return null;
@@ -1296,9 +1294,8 @@ function buildScene() {
   setupEnvironment();
   setupMaterials();
 
-  // Section clipping plane
+  // Section clipping plane (applied per-material on playhouse, not globally)
   sectionPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 1000);
-  renderer.clippingPlanes = [sectionPlane];
   renderer.localClippingEnabled = true;
 
   scene.add(createGround());
@@ -1315,11 +1312,16 @@ function buildScene() {
   playhouse.add(createLadder());
   playhouse.add(createLabels());
 
-  // Enable shadows on all meshes
+  // Enable shadows and apply clipping plane to playhouse meshes
   playhouse.traverse(c => {
     if (c.isMesh) {
-      c.castShadow = true;
-      c.receiveShadow = true;
+      // Skip glass and frames — they have intentional shadow settings
+      if (c.material !== MAT.glass && c.material !== MAT.frame) {
+        c.castShadow = true;
+        c.receiveShadow = true;
+      }
+      // Apply section clipping to playhouse materials only (not ground/contact shadow)
+      if (c.material) c.material.clippingPlanes = [sectionPlane];
     }
   });
 
@@ -1331,16 +1333,19 @@ function buildScene() {
 // ============================================================
 // Resize
 // ============================================================
+let resizeTimer;
 window.addEventListener('resize', () => {
-  const w = window.innerWidth, h = window.innerHeight;
-  renderer.setSize(w, h);
-  perspCamera.aspect = w / h;
-  perspCamera.updateProjectionMatrix();
-  if (orthoCamera) {
-    // Rerun current ortho view
-    switchView(currentView);
-  }
-  if (composer) composer.setSize(w, h);
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    const w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w, h);
+    perspCamera.aspect = w / h;
+    perspCamera.updateProjectionMatrix();
+    if (currentView !== '3d') {
+      switchView(currentView);
+    }
+    if (composer) composer.setSize(w, h);
+  }, 150);
 });
 
 // ============================================================
@@ -1348,14 +1353,9 @@ window.addEventListener('resize', () => {
 // ============================================================
 function animate() {
   requestAnimationFrame(animate);
-  if (currentView === '3d') {
-    if (composer) {
-      // Update render pass camera
-      composer.passes[0].camera = activeCamera;
-      try { composer.render(); } catch(e) { renderer.render(scene, activeCamera); }
-    } else {
-      renderer.render(scene, activeCamera);
-    }
+  if (currentView === '3d' && composer && !composerFailed) {
+    composer.passes[0].camera = activeCamera;
+    try { composer.render(); } catch(e) { composerFailed = true; renderer.render(scene, activeCamera); }
   } else {
     renderer.render(scene, activeCamera);
   }
