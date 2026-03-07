@@ -114,13 +114,6 @@ function createDimensions() {
     '172 cm'
   ));
 
-  // Vyska dveri
-  g.add(makeDimLine(
-    new THREE.Vector3(-CONFIG.DOOR_W / 2 + CONFIG.DOOR_OFFSET_X, CONFIG.H1, divZ),
-    new THREE.Vector3(-CONFIG.DOOR_W / 2 + CONFIG.DOOR_OFFSET_X, CONFIG.H1 + CONFIG.DOOR_H, divZ),
-    new THREE.Vector3(0, 0, -0.25),
-    '110 cm'
-  ));
 
   // Vyska zabradli
   g.add(makeDimLine(
