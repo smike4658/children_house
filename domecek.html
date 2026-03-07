@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dětský Patrový Domeček — 3D Návrh</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1f16; color: #d4c9a8; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+  #canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+  canvas { display: block; }
+
+  /* UI Overlay */
+  #ui { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+
+  /* Tab bar */
+  #tabs { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px;
+    background: rgba(26,31,22,0.88); border: 1px solid #3a4030; border-radius: 8px; padding: 4px;
+    pointer-events: all; backdrop-filter: blur(8px); flex-wrap: wrap; justify-content: center; }
+  .tab { padding: 6px 14px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 500;
+    color: #8a9a72; border: 1px solid transparent; transition: all 0.15s; white-space: nowrap; }
+  .tab:hover { color: #d4c9a8; background: #2a3022; }
+  .tab.active { background: #3a4830; color: #d4c9a8; border-color: #5a6a4a; }
+
+  /* Spec chips */
+  #specs { position: absolute; top: 68px; left: 12px; display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
+  .chip { background: rgba(26,31,22,0.82); border: 1px solid #3a4030; border-radius: 4px;
+    padding: 3px 8px; font-size: 11px; color: #8a9a72; }
+  .chip span { color: #d4c9a8; font-weight: 600; }
+
+  /* Legend */
+  #legend { position: absolute; top: 68px; right: 12px; background: rgba(26,31,22,0.82);
+    border: 1px solid #3a4030; border-radius: 6px; padding: 8px 10px; min-width: 130px; pointer-events: none; }
+  #legend h4 { font-size: 10px; color: #8a9a72; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; font-size: 11px; color: #d4c9a8; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  /* Controls hint */
+  #controls-hint { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+    background: rgba(26,31,22,0.75); border: 1px solid #3a4030; border-radius: 5px;
+    padding: 5px 12px; font-size: 11px; color: #8a9a72; pointer-events: none; text-align: center; }
+
+  /* View buttons (3D mode) */
+  #view-presets { position: absolute; bottom: 50px; right: 12px; display: flex; flex-direction: column; gap: 3px;
+    pointer-events: all; }
+  .vbtn { background: rgba(26,31,22,0.82); border: 1px solid #3a4030; border-radius: 4px;
+    padding: 4px 10px; font-size: 11px; color: #8a9a72; cursor: pointer; text-align: center; }
+  .vbtn:hover { color: #d4c9a8; background: #2a3022; }
+
+  /* Toggles */
+  #toggles { position: absolute; bottom: 50px; left: 12px; display: flex; flex-direction: column; gap: 3px;
+    pointer-events: all; }
+  .toggle-btn { background: rgba(26,31,22,0.82); border: 1px solid #3a4030; border-radius: 4px;
+    padding: 4px 10px; font-size: 11px; color: #8a9a72; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+  .toggle-btn:hover { color: #d4c9a8; }
+  .toggle-btn.on { border-color: #5a6a4a; color: #d4c9a8; }
+  .toggle-dot { width: 8px; height: 8px; border-radius: 50%; background: #3a4030; flex-shrink: 0; }
+  .toggle-btn.on .toggle-dot { background: #8a9a72; }
+
+  /* Print button (2D views) */
+  #print-btn { position: absolute; bottom: 50px; right: 12px; background: rgba(26,31,22,0.82);
+    border: 1px solid #5a6a4a; border-radius: 4px; padding: 6px 14px; font-size: 12px;
+    color: #d4c9a8; cursor: pointer; pointer-events: all; display: none; }
+  #print-btn:hover { background: #2a3022; }
+
+  /* 2D view hidden by default */
+  #view-2d-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none;
+    align-items: center; justify-content: center; pointer-events: none; }
+  #view-2d-overlay svg { pointer-events: none; }
+
+  @media print {
+    #ui { display: none; }
+    #canvas-container { position: static; }
+    canvas { width: 100% !important; height: auto !important; }
+  }
+</style>
+</head>
+<body>
+<div id="canvas-container"></div>
+
+<div id="ui">
+  <!-- Tab bar -->
+  <div id="tabs">
+    <div class="tab active" data-view="3d">3D</div>
+    <div class="tab" data-view="floor1">Pudorys 1. patro</div>
+    <div class="tab" data-view="floor2">Pudorys 2. patro</div>
+    <div class="tab" data-view="front">Nárys zepředu</div>
+    <div class="tab" data-view="side">Nárys z boku</div>
+    <div class="tab" data-view="section">Rez</div>
+  </div>
+
+  <!-- Spec chips -->
+  <div id="specs">
+    <div class="chip">Šířka: <span>310 cm</span></div>
+    <div class="chip">Hloubka: <span>242 cm</span></div>
+    <div class="chip">Výška: <span>300 / 345 cm</span></div>
+    <div class="chip">Strop 1p: <span>150 cm</span></div>
+    <div class="chip">Kabina: <span>310 × 172 cm</span></div>
+    <div class="chip">Terasa: <span>310 × 70 cm</span></div>
+  </div>
+
+  <!-- Legend -->
+  <div id="legend">
+    <h4>Legenda</h4>
+    <div class="legend-item"><div class="legend-dot" style="background:#C4944A"></div>Nosné sloupky</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#B8860B"></div>Stěny / palubky</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#A0784C"></div>Podlahy</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#6B3A2A"></div>Střecha</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#D4A056"></div>Zábradlí</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#E85D75"></div>Klouzačka</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#5B8C3E"></div>Žebřík</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#999999"></div>Betonové patky</div>
+  </div>
+
+  <!-- Controls hint -->
+  <div id="controls-hint" id="hint-3d">Levé tl.: otáčení &nbsp;|&nbsp; Pravé tl.: posun &nbsp;|&nbsp; Kolečko: zoom &nbsp;|&nbsp; Dotyk: 1 prst otáčení, 2 prsty zoom</div>
+
+  <!-- View presets (3D only) -->
+  <div id="view-presets">
+    <div class="vbtn" data-preset="iso">Iso</div>
+    <div class="vbtn" data-preset="front">Zepředu</div>
+    <div class="vbtn" data-preset="back">Zezadu</div>
+    <div class="vbtn" data-preset="left">Zleva</div>
+    <div class="vbtn" data-preset="right">Zprava</div>
+    <div class="vbtn" data-preset="top">Shora</div>
+  </div>
+
+  <!-- Toggles (3D only) -->
+  <div id="toggles">
+    <div class="toggle-btn" id="toggle-wire"><div class="toggle-dot"></div>Drátový model</div>
+    <div class="toggle-btn on" id="toggle-labels"><div class="toggle-dot"></div>Popisky</div>
+  </div>
+
+  <!-- Print button (2D only) -->
+  <button id="print-btn" onclick="window.print()">Tisk / Export</button>
+</div>
+
+<!-- Three.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/SSAOPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/GammaCorrectionShader.js"></script>
+
+<script>
+// ============================================================
+// CONFIG — všechny rozměry na jednom místě
+// ============================================================
+const CONFIG = {
+  W: 3.10,
+  D: 2.42,
+  H: 3.00,
+  H1: 1.50,
+  TD: 0.70,
+  get CD() { return this.D - this.TD; },  // 1.72
+  POST: 0.12,
+  WALL_T: 0.04,
+  BEAM: 0.07,
+  ROOF_OVERHANG: 0.15,
+  ROOF_PEAK: 0.45,
+  DOOR_W: 0.55,
+  DOOR_H: 1.10,
+  DOOR_OFFSET_X: 0.15,
+  SIDE_WIN_W: 0.50,
+  SIDE_WIN_H: 0.40,
+  FRONT_WIN_W: 0.40,
+  FRONT_WIN_H: 0.35,
+  SLIDE_LEN: 2.60,
+  SLIDE_W: 0.42,
+  LADDER_W: 0.45,
+  LADDER_H: 1.85,
+  LADDER_RUNGS: 6,
+  RAIL_H: 0.90,
+  RAIL_T: 0.04,
+};
+
+const COLORS = {
+  posts:    '#C4944A',
+  walls:    '#B8860B',
+  floor:    '#A0784C',
+  roof:     '#6B3A2A',
+  roofEdge: '#4A2818',
+  railing:  '#D4A056',
+  slide:    '#E85D75',
+  ladder:   '#5B8C3E',
+  frame:    '#f0e8d0',
+  concrete: '#999999',
+  grass:    '#4a7a2e',
+  sky:      '#87CEEB',
+};
+
+// ============================================================
+// Scene, Renderer
+// ============================================================
+const container = document.getElementById('canvas-container');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.VSMShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+renderer.outputEncoding = THREE.sRGBEncoding;
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+
+// ============================================================
+// Cameras
+// ============================================================
+const perspCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+perspCamera.position.set(6, 4, -6);
+perspCamera.lookAt(0, 1.5, 0);
+
+let orthoCamera = null;
+let activeCamera = perspCamera;
+let currentView = '3d';
+
+function makeOrthoCamera(left, right, top, bottom, pos, target) {
+  const cam = new THREE.OrthographicCamera(left, right, top, bottom, 0.01, 100);
+  cam.position.copy(pos);
+  cam.lookAt(target || new THREE.Vector3(0, 0, 0));
+  return cam;
+}
+
+// ============================================================
+// Lighting
+// ============================================================
+const ambientLight = new THREE.AmbientLight(0xfff8f0, 0.6);
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xffeedd, 1.2);
+dirLight.position.set(5, 10, -4);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.set(2048, 2048);
+dirLight.shadow.camera.near = 0.1;
+dirLight.shadow.camera.far = 25;
+dirLight.shadow.camera.left = -7;
+dirLight.shadow.camera.right = 7;
+dirLight.shadow.camera.top = 7;
+dirLight.shadow.camera.bottom = -7;
+dirLight.shadow.bias = -0.0001;
+dirLight.shadow.radius = 4;
+scene.add(dirLight);
+
+const fillLight = new THREE.DirectionalLight(0xd0e8ff, 0.3);
+fillLight.position.set(-4, 3, 5);
+scene.add(fillLight);
+
+// ============================================================
+// Environment — HDRI + fallback
+// ============================================================
+function setupEnvironment() {
+  try {
+    if (typeof THREE.RGBELoader !== 'undefined') {
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      pmrem.compileEquirectangularShader();
+      new THREE.RGBELoader()
+        .setDataType(THREE.UnsignedByteType)
+        .load(
+          'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/kloppenheim_06_puresky_1k.hdr',
+          (texture) => {
+            const envMap = pmrem.fromEquirectangular(texture).texture;
+            scene.environment = envMap;
+            scene.background = envMap;
+            texture.dispose();
+            pmrem.dispose();
+          },
+          undefined,
+          () => setupFallbackSky()
+        );
+    } else {
+      setupFallbackSky();
+    }
+  } catch(e) {
+    setupFallbackSky();
+  }
+}
+
+function setupFallbackSky() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1; canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0, '#4a90d9');
+  grad.addColorStop(0.4, '#87CEEB');
+  grad.addColorStop(0.75, '#b8daf0');
+  grad.addColorStop(1.0, '#e8dcc8');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 1, 256);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  scene.background = tex;
+}
+
+// ============================================================
+// Materials
+// ============================================================
+let MAT = {};
+
+function makeWoodTexture(baseColor, grainColor, options = {}) {
+  const size = options.size || 512;
+  const c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = baseColor;
+  ctx.fillRect(0, 0, size, size);
+  for (let i = 0; i < 600; i++) {
+    ctx.fillStyle = `rgba(${Math.random()>0.5?255:0},${Math.random()>0.5?180:40},0,0.02)`;
+    ctx.fillRect(Math.random()*size, Math.random()*size, Math.random()*8+2, Math.random()*4+1);
+  }
+  for (let layer = 0; layer < 3; layer++) {
+    ctx.strokeStyle = grainColor;
+    for (let i = 0; i < 50; i++) {
+      ctx.globalAlpha = 0.04 + Math.random() * 0.08;
+      ctx.lineWidth = 0.3 + Math.random() * 1.2;
+      const y = Math.random() * size;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      for (let x = 0; x < size; x += 4) {
+        ctx.lineTo(x, y + Math.sin(x * 0.01 + i * 0.7) * 4 + (Math.random()-0.5) * 1.5);
+      }
+      ctx.stroke();
+    }
+  }
+  const knotCount = options.knots || 2;
+  for (let i = 0; i < knotCount; i++) {
+    const kx = Math.random() * size;
+    const ky = Math.random() * size;
+    const kr = 4 + Math.random() * 10;
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = '#4a3520';
+    ctx.beginPath();
+    ctx.ellipse(kx, ky, kr, kr * 0.7, Math.random() * Math.PI, 0, Math.PI * 2);
+    ctx.fill();
+    for (let r = 1; r < 4; r++) {
+      ctx.globalAlpha = 0.05;
+      ctx.strokeStyle = '#5a4530';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.ellipse(kx, ky, kr + r*6, kr*0.7 + r*4, Math.random()*0.2, 0, Math.PI*2);
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(options.repeatX || 2, options.repeatY || 2);
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return tex;
+}
+
+function makePalubkyTexture() {
+  const size = 512;
+  const c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  const ctx = c.getContext('2d');
+  const baseColor = '#B8860B';
+  ctx.fillStyle = baseColor;
+  ctx.fillRect(0, 0, size, size);
+  // Horizontal planks
+  const plankH = size / 12;
+  for (let p = 0; p < 12; p++) {
+    const y0 = p * plankH;
+    const lightness = 0.9 + Math.random() * 0.2;
+    ctx.fillStyle = `rgba(${lightness>1?20:0},${lightness>1?10:0},0,${Math.abs(lightness-1)*0.3})`;
+    ctx.fillRect(0, y0, size, plankH);
+    // Plank seam
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, y0); ctx.lineTo(size, y0);
+    ctx.stroke();
+    // Wood grain
+    ctx.strokeStyle = '#9a7008';
+    for (let i = 0; i < 8; i++) {
+      ctx.globalAlpha = 0.06 + Math.random()*0.08;
+      ctx.lineWidth = 0.5 + Math.random();
+      const y = y0 + Math.random() * plankH;
+      ctx.beginPath(); ctx.moveTo(0, y);
+      for (let x = 0; x < size; x += 8) {
+        ctx.lineTo(x, y + Math.sin(x*0.02+i)*2 + (Math.random()-0.5));
+      }
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return tex;
+}
+
+function setupMaterials() {
+  const woodTex = makeWoodTexture('#C4944A', '#8a6020', { knots: 3, repeatX: 1, repeatY: 4 });
+  const palubkyTex = makePalubkyTexture();
+  const floorTex = makeWoodTexture('#A0784C', '#7a5830', { knots: 2, repeatX: 3, repeatY: 2 });
+  const roofTex = makeWoodTexture('#6B3A2A', '#4a2818', { knots: 1, repeatX: 2, repeatY: 2 });
+
+  MAT.posts = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.8 });
+  MAT.walls = new THREE.MeshStandardMaterial({ map: palubkyTex, roughness: 0.85 });
+  MAT.floor = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.9 });
+  MAT.roof = new THREE.MeshStandardMaterial({ map: roofTex, roughness: 0.7 });
+  MAT.roofEdge = new THREE.MeshStandardMaterial({ color: COLORS.roofEdge, roughness: 0.8 });
+  MAT.railing = new THREE.MeshStandardMaterial({ color: COLORS.railing, roughness: 0.75 });
+  MAT.slide = new THREE.MeshStandardMaterial({ color: COLORS.slide, metalness: 0.3, roughness: 0.25 });
+  MAT.ladder = new THREE.MeshStandardMaterial({ color: COLORS.ladder, roughness: 0.8 });
+  MAT.frame = new THREE.MeshStandardMaterial({ color: COLORS.frame, roughness: 0.7 });
+  MAT.glass = new THREE.MeshStandardMaterial({ color: 0xaad4f5, transparent: true, opacity: 0.4, roughness: 0.1, metalness: 0.1 });
+  MAT.concrete = new THREE.MeshStandardMaterial({ color: COLORS.concrete, roughness: 0.9 });
+  MAT.beam = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.8 });
+}
+
+// ============================================================
+// Ground
+// ============================================================
+function createGround() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 512;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#4a7a2e';
+  ctx.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 3000; i++) {
+    const g = 80 + Math.random() * 60;
+    ctx.fillStyle = `rgba(${30+Math.random()*40}, ${g}, ${20+Math.random()*20}, 0.15)`;
+    ctx.fillRect(Math.random()*512, Math.random()*512, 2+Math.random()*6, 2+Math.random()*6);
+  }
+  ctx.strokeStyle = '#5a8a35';
+  for (let i = 0; i < 500; i++) {
+    ctx.globalAlpha = 0.08;
+    ctx.lineWidth = 0.5;
+    const x = Math.random()*512, y = Math.random()*512;
+    ctx.beginPath(); ctx.moveTo(x, y);
+    ctx.lineTo(x+(Math.random()-0.5)*3, y-3-Math.random()*5);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(8, 8);
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(25, 25),
+    new THREE.MeshStandardMaterial({ map: tex, roughness: 1.0 })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  ground.name = 'ground';
+  return ground;
+}
+
+// Contact shadow
+function createContactShadow() {
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(CONFIG.W + 1.5, CONFIG.D + 1.5),
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.15, depthWrite: false })
+  );
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.set(0, 0.002, 0);
+  mesh.name = 'contactShadow';
+  return mesh;
+}
+
+// ============================================================
+// Helper: box mesh
+// ============================================================
+function box(w, h, d, mat, castShadow=true, receiveShadow=true) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.castShadow = castShadow;
+  m.receiveShadow = receiveShadow;
+  return m;
+}
+
+// ============================================================
+// Footings — betonové patky
+// ============================================================
+function createFootings() {
+  const g = new THREE.Group(); g.name = 'footings';
+  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+  const positions = [
+    [-hw, 0, -hd], [hw, 0, -hd],
+    [-hw, 0,  hd], [hw, 0,  hd],
+  ];
+  const FW = 0.22, FD = 0.22, FH = 0.10;
+  positions.forEach(([x, , z]) => {
+    const m = box(FW, FH, FD, MAT.concrete);
+    m.position.set(x, FH/2, z);
+    g.add(m);
+  });
+  return g;
+}
+
+// ============================================================
+// Posts — nosné sloupky
+// ============================================================
+function createPosts() {
+  const g = new THREE.Group(); g.name = 'posts';
+  const P = CONFIG.POST;
+  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+  const H = CONFIG.H + CONFIG.ROOF_PEAK;
+  const FH = 0.10;
+
+  // 4 rohové sloupky — celá výška
+  const corners = [
+    [-hw, -hd], [hw, -hd],
+    [-hw,  hd], [hw,  hd],
+  ];
+  corners.forEach(([x, z]) => {
+    const m = box(P, H, P, MAT.posts);
+    m.position.set(x, H/2 + FH, z);
+    g.add(m);
+  });
+
+  // 2 střední sloupky (přední + zadní), celá výška
+  [-hd, hd].forEach(z => {
+    const m = box(P * 0.85, H, P * 0.85, MAT.posts);
+    m.position.set(0, H/2 + FH, z);
+    g.add(m);
+  });
+
+  // divZ = pozice přední stěny kabiny = -hd + CONFIG.TD
+  const divZ = -hd + CONFIG.TD;
+  // 2 dělicí sloupky terasa/kabina, od H1 výš
+  const cabinH = CONFIG.H - CONFIG.H1 + CONFIG.ROOF_PEAK;
+  [-hw, hw].forEach(x => {
+    const m = box(P * 0.85, cabinH, P * 0.85, MAT.posts);
+    m.position.set(x, CONFIG.H1 + cabinH/2, divZ);
+    g.add(m);
+  });
+
+  return g;
+}
+
+// ============================================================
+// Beams — trámy
+// ============================================================
+function createBeams() {
+  const g = new THREE.Group(); g.name = 'beams';
+  const B = CONFIG.BEAM;
+  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+
+  // Horní rámy po obvodu na výšce H2 = CONFIG.H
+  const H2 = CONFIG.H;
+  // přední, zadní
+  [-hd, hd].forEach(z => {
+    const m = box(CONFIG.W, B, B, MAT.beam);
+    m.position.set(0, H2, z);
+    g.add(m);
+  });
+  // levý, pravý
+  [-hw, hw].forEach(x => {
+    const m = box(B, B, CONFIG.D, MAT.beam);
+    m.position.set(x, H2, 0);
+    g.add(m);
+  });
+
+  // Stropní nosníky pod podlahou 2. patra (joists)
+  for (let i = 0; i < 4; i++) {
+    const z = -hd + CONFIG.D / 5 * (i + 0.5);
+    const m = box(CONFIG.W, B, B, MAT.beam);
+    m.position.set(0, CONFIG.H1 - B/2, z);
+    g.add(m);
+  }
+
+  // Podlahové nosníky 1. patra
+  for (let i = 0; i < 3; i++) {
+    const z = -hd + CONFIG.D / 4 * (i + 0.5);
+    const m = box(CONFIG.W, B, B, MAT.beam);
+    m.position.set(0, -B/2 + 0.01, z);
+    g.add(m);
+  }
+
+  // Rám přední stěny kabiny
+  const divZ = -hd + CONFIG.TD;
+  const cabinH = CONFIG.H - CONFIG.H1;
+  const m = box(CONFIG.W, B, B, MAT.beam);
+  m.position.set(0, CONFIG.H1 + cabinH/2, divZ);
+  g.add(m);
+
+  return g;
+}
+
+// ============================================================
+// Floors — podlahy
+// ============================================================
+function createFloors() {
+  const g = new THREE.Group(); g.name = 'floors';
+  const FH1 = 0.05, FH2 = 0.06;
+
+  // Podlaha 1. patra
+  const f1 = box(CONFIG.W, FH1, CONFIG.D, MAT.floor);
+  f1.position.set(0, FH1/2, 0);
+  g.add(f1);
+
+  // Podlaha 2. patra (celý půdorys)
+  const f2 = box(CONFIG.W, FH2, CONFIG.D, MAT.floor);
+  f2.position.set(0, CONFIG.H1 + FH2/2, 0);
+  g.add(f2);
+
+  return g;
+}
+
+// ============================================================
+// Walls — stěny
+// ============================================================
+
+// Helper: stěna s otvorem (okno/dveře)
+function wallWithHole(totalW, totalH, holeX, holeY, holeW, holeH, mat, depth) {
+  const g = new THREE.Group();
+  const segments = [
+    // vlevo od otvoru
+    { x: (holeX - totalW/2 - holeW/2)/2 + (holeX - totalW/2)/2,
+      w: holeX - totalW/2 - holeW/2,
+      y: totalH/2, h: totalH },
+    // vpravo od otvoru
+    { x: (holeX + holeW/2 + totalW/2)/2,
+      w: totalW/2 - holeX - holeW/2,
+      y: totalH/2, h: totalH },
+    // nad otvorem
+    { x: holeX, w: holeW,
+      y: (holeY + holeH/2 + totalH)/2,
+      h: totalH - holeY - holeH/2 },
+    // pod otvorem
+    { x: holeX, w: holeW,
+      y: holeY - holeH/2 - (holeY - holeH/2)/2,
+      h: holeY - holeH/2 },
+  ];
+  segments.forEach(s => {
+    if (s.w <= 0.001 || s.h <= 0.001) return;
+    const m = box(s.w, s.h, depth, mat);
+    m.position.set(s.x, s.y, 0);
+    g.add(m);
+  });
+  return g;
+}
+
+// Wall with two holes (door + window)
+function wallWithTwoHoles(totalW, totalH, holes, mat, depth) {
+  // holes: [{x, y, w, h}, ...]
+  // Simple approach: build column strips
+  const g = new THREE.Group();
+  // Sort holes by x
+  holes.sort((a, b) => a.x - b.x);
+  const h1 = holes[0], h2 = holes[1];
+
+  // Full height strips between/around holes
+  const leftEdge = -totalW/2;
+  const rightEdge = totalW/2;
+
+  // Columns: left of h1, between h1 and h2, right of h2
+  const columns = [
+    { x0: leftEdge, x1: h1.x - h1.w/2 },
+    { x0: h1.x + h1.w/2, x1: h2.x - h2.w/2 },
+    { x0: h2.x + h2.w/2, x1: rightEdge },
+  ];
+  columns.forEach(col => {
+    const cw = col.x1 - col.x0;
+    if (cw <= 0.001) return;
+    const m = box(cw, totalH, depth, mat);
+    m.position.set((col.x0 + col.x1)/2, totalH/2, 0);
+    g.add(m);
+  });
+
+  // Rows above/below each hole (in their x range)
+  holes.forEach(hole => {
+    // above
+    const aboveH = totalH - (hole.y + hole.h/2);
+    if (aboveH > 0.001) {
+      const m = box(hole.w, aboveH, depth, mat);
+      m.position.set(hole.x, hole.y + hole.h/2 + aboveH/2, 0);
+      g.add(m);
+    }
+    // below
+    const belowH = hole.y - hole.h/2;
+    if (belowH > 0.001) {
+      const m = box(hole.w, belowH, depth, mat);
+      m.position.set(hole.x, belowH/2, 0);
+      g.add(m);
+    }
+  });
+
+  return g;
+}
+
+function createWalls() {
+  const g = new THREE.Group(); g.name = 'walls';
+  const T = CONFIG.WALL_T;
+  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+  const divZ = -hd + CONFIG.TD;
+
+  // === Zadní stěna (+Z) — plná, celá výška (1. + 2. patro) ===
+  const backH = CONFIG.H + CONFIG.ROOF_PEAK * 0.5; // approximate to roof base
+  const backWall = box(CONFIG.W, CONFIG.H, T, MAT.walls);
+  backWall.position.set(0, CONFIG.H/2, hd + T/2);
+  g.add(backWall);
+
+  // === Pravá stěna (+X) — plná 1. patro + 2. patro s oknem ===
+  // 1. patro: plná
+  const right1 = box(T, CONFIG.H1, CONFIG.D, MAT.walls);
+  right1.position.set(hw + T/2, CONFIG.H1/2, 0);
+  g.add(right1);
+
+  // 2. patro pravá stěna s oknem (okno 50×40, cca uprostřed)
+  const r2H = CONFIG.H - CONFIG.H1;
+  const win2 = { x: 0, y: r2H/2, w: CONFIG.SIDE_WIN_W, h: CONFIG.SIDE_WIN_H };
+  // holeX relative to center of wall depth (D)
+  const right2 = wallWithHole(CONFIG.D, r2H, win2.x, win2.y, win2.w, win2.h, MAT.walls, T);
+  right2.rotation.y = -Math.PI / 2;
+  right2.position.set(hw + T/2, CONFIG.H1, 0);
+  g.add(right2);
+
+  // Window frame — right wall
+  addWindowFrame(g, hw + T, CONFIG.H1 + win2.y, 0, CONFIG.SIDE_WIN_W, CONFIG.SIDE_WIN_H, T, 'x', true);
+
+  // === Přední stěna kabiny (divZ) — 2. patro, dveře + okno ===
+  const cabH = CONFIG.H - CONFIG.H1;
+  // Dveře: vlevo, okno vpravo
+  const doorX = -CONFIG.W/2 + CONFIG.DOOR_W/2 + CONFIG.DOOR_OFFSET_X + 0.15;
+  const winX  =  CONFIG.W/2 - CONFIG.FRONT_WIN_W/2 - 0.15;
+  const holes = [
+    { x: doorX, y: CONFIG.DOOR_H/2, w: CONFIG.DOOR_W, h: CONFIG.DOOR_H },
+    { x: winX,  y: cabH/2,          w: CONFIG.FRONT_WIN_W, h: CONFIG.FRONT_WIN_H },
+  ];
+  const frontCabin = wallWithTwoHoles(CONFIG.W, cabH, holes, MAT.walls, T);
+  frontCabin.position.set(0, CONFIG.H1, divZ - T/2);
+  g.add(frontCabin);
+
+  // Door frame
+  addDoorFrame(g, doorX, CONFIG.H1, divZ - T, CONFIG.DOOR_W, CONFIG.DOOR_H, T);
+  // Front cabin window frame
+  addWindowFrame(g, winX, CONFIG.H1 + cabH/2, divZ - T, CONFIG.FRONT_WIN_W, CONFIG.FRONT_WIN_H, T, 'z', false);
+
+  return g;
+}
+
+function addWindowFrame(g, x, y, z, w, h, depth, axis, crosshair=false) {
+  const FT = 0.03;
+  if (axis === 'x') {
+    // Frame around window in right wall (rotated)
+    const parts = [
+      // top
+      { pw: w + FT*2, ph: FT, pd: depth*2, ox: 0, oy: h/2 + FT/2, oz: 0 },
+      // bottom
+      { pw: w + FT*2, ph: FT, pd: depth*2, ox: 0, oy: -h/2 - FT/2, oz: 0 },
+      // left
+      { pw: FT, ph: h, pd: depth*2, ox: -w/2 - FT/2, oy: 0, oz: 0 },
+      // right
+      { pw: FT, ph: h, pd: depth*2, ox: w/2 + FT/2, oy: 0, oz: 0 },
+    ];
+    if (crosshair) {
+      parts.push({ pw: w, ph: FT, pd: depth*2, ox: 0, oy: 0, oz: 0 }); // horiz
+      parts.push({ pw: FT, ph: h, pd: depth*2, ox: 0, oy: 0, oz: 0 }); // vert
+    }
+    parts.forEach(p => {
+      const m = box(p.pd, p.ph, p.pw, MAT.frame, false, false);
+      m.position.set(x, y + p.oy, z + p.oz);
+      g.add(m);
+    });
+    // Glass
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, h), MAT.glass);
+    glass.rotation.y = Math.PI/2;
+    glass.position.set(x, y, z);
+    g.add(glass);
+  } else {
+    // z-facing window
+    const parts = [
+      { pw: w + FT*2, ph: FT, pd: depth*2, ox: 0, oy: h/2 + FT/2, oz: 0 },
+      { pw: w + FT*2, ph: FT, pd: depth*2, ox: 0, oy: -h/2 - FT/2, oz: 0 },
+      { pw: FT, ph: h + FT*2, pd: depth*2, ox: -w/2 - FT/2, oy: 0, oz: 0 },
+      { pw: FT, ph: h + FT*2, pd: depth*2, ox: w/2 + FT/2, oy: 0, oz: 0 },
+    ];
+    parts.forEach(p => {
+      const m = box(p.pw, p.ph, p.pd, MAT.frame, false, false);
+      m.position.set(x + p.ox, y + p.oy, z);
+      g.add(m);
+    });
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, h), MAT.glass);
+    glass.position.set(x, y, z);
+    g.add(glass);
+  }
+}
+
+function addDoorFrame(g, x, y, z, w, h, depth) {
+  const FT = 0.04;
+  // sides
+  [-1, 1].forEach(side => {
+    const m = box(FT, h, depth*2, MAT.frame, false, false);
+    m.position.set(x + side*(w/2 + FT/2), y + h/2, z);
+    g.add(m);
+  });
+  // lintel
+  const lintel = box(w + FT*2, FT, depth*2, MAT.frame, false, false);
+  lintel.position.set(x, y + h + FT/2, z);
+  g.add(lintel);
+}
+
+// ============================================================
+// Roof — pultová, pouze nad kabinou
+// ============================================================
+function createRoof() {
+  const g = new THREE.Group(); g.name = 'roof';
+  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+  const divZ = -hd + CONFIG.TD;
+  const OH = CONFIG.ROOF_OVERHANG;
+  const T = 0.06; // tloušťka střešního pláště
+
+  // Pultová střecha: přední hrana na H2 = CONFIG.H, zadní hrana na H2 + ROOF_PEAK
+  const H2 = CONFIG.H;
+  const HP = H2 + CONFIG.ROOF_PEAK;
+  const cabinDepth = CONFIG.D - CONFIG.TD; // 1.72
+
+  // Roof panel as a tilted box — using rotated mesh
+  const roofLen = Math.sqrt(cabinDepth * cabinDepth + CONFIG.ROOF_PEAK * CONFIG.ROOF_PEAK) + OH * 2;
+  const roofAngle = Math.atan2(CONFIG.ROOF_PEAK, cabinDepth);
+  const roofCenterY = (H2 + HP) / 2;
+  const roofCenterZ = (divZ + hd) / 2;
+
+  const roofMesh = box(CONFIG.W + OH*2, T, roofLen, MAT.roof);
+  roofMesh.rotation.x = -roofAngle;
+  roofMesh.position.set(0, roofCenterY + T/2, roofCenterZ);
+  g.add(roofMesh);
+
+  // Barge boards (fascie) — přední a zadní hrana
+  const bargeT = 0.04;
+  [-1, 1].forEach(side => {
+    const m = box(CONFIG.W + OH*2 + bargeT*2, bargeT, bargeT, MAT.roofEdge, false, false);
+    m.position.set(0,
+      side === -1 ? H2 - bargeT/2 : HP - bargeT/2,
+      side === -1 ? divZ - OH : hd + OH
+    );
+    g.add(m);
+  });
+
+  // Vergeboard — levý a pravý okraj
+  [-1, 1].forEach(side => {
+    const m = box(bargeT, T * 1.5, roofLen, MAT.roofEdge, false, false);
+    m.rotation.x = -roofAngle;
+    m.position.set(side * (CONFIG.W/2 + OH + bargeT/2), roofCenterY, roofCenterZ);
+    g.add(m);
+  });
+
+  return g;
+}
+
+// ============================================================
+// Railing — zábradlí terasy
+// ============================================================
+function createRailing() {
+  const g = new THREE.Group(); g.name = 'railing';
+  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+  const divZ = -hd + CONFIG.TD;
+  const RH = CONFIG.RAIL_H;
+  const RT = CONFIG.RAIL_T;
+  const baseY = CONFIG.H1 + 0.06; // on top of 2nd floor
+
+  function addPost(x, z, height) {
+    const m = box(RT, height, RT, MAT.railing);
+    m.position.set(x, baseY + height/2, z);
+    g.add(m);
+  }
+  function addRail(x1, z1, x2, z2, y) {
+    const dx = x2-x1, dz = z2-z1;
+    const len = Math.sqrt(dx*dx + dz*dz);
+    const angle = Math.atan2(dx, dz);
+    const m = box(len, RT, RT, MAT.railing, false, false);
+    m.rotation.y = angle;
+    m.position.set((x1+x2)/2, y, (z1+z2)/2);
+    g.add(m);
+  }
+
+  // Přední zábradlí (-Z strana terasy)
+  const zFront = -hd;
+  // Posts
+  const numFront = 5;
+  for (let i = 0; i <= numFront; i++) {
+    const x = -hw + CONFIG.W / numFront * i;
+    addPost(x, zFront, RH);
+  }
+  // Top rail
+  addRail(-hw, zFront, hw, zFront, baseY + RH - RT/2);
+  // Mid rail
+  addRail(-hw, zFront, hw, zFront, baseY + RH/2);
+
+  // Levé zábradlí (-X strana terasy)
+  const xLeft = -hw;
+  const numLeft = 3;
+  for (let i = 0; i <= numLeft; i++) {
+    const z = zFront + CONFIG.TD / numLeft * i;
+    addPost(xLeft, z, RH);
+  }
+  addRail(xLeft, zFront, xLeft, divZ, baseY + RH - RT/2);
+  addRail(xLeft, zFront, xLeft, divZ, baseY + RH/2);
+
+  return g;
+}
+
+// ============================================================
+// Slide — klouzačka (pravá strana terasy, sjíždí dopředu)
+// ============================================================
+function createSlide() {
+  const g = new THREE.Group(); g.name = 'slide';
+  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+
+  const slideLen = CONFIG.SLIDE_LEN;
+  const slideAngle = Math.asin(CONFIG.H1 / slideLen);
+
+  // Build slide with pivot at top (origin), extending along -Z
+  const slideGroup = new THREE.Group();
+
+  const slideMesh = box(CONFIG.SLIDE_W, 0.04, slideLen, MAT.slide);
+  slideMesh.position.set(0, 0, -slideLen / 2);
+  slideGroup.add(slideMesh);
+
+  [-1, 1].forEach(side => {
+    const rail = box(0.04, 0.12, slideLen, MAT.slide);
+    rail.position.set(side * (CONFIG.SLIDE_W / 2 - 0.02), 0.06, -slideLen / 2);
+    slideGroup.add(rail);
+  });
+
+  // Negative rotation.x tilts -Z end downward (away from house toward lawn)
+  slideGroup.rotation.x = -slideAngle;
+
+  // Pivot at top of slide: right front corner of terrace
+  slideGroup.position.set(hw - CONFIG.SLIDE_W / 2, CONFIG.H1, -hd);
+
+  g.add(slideGroup);
+  return g;
+}
+
+// ============================================================
+// Ladder — žebřík (levá strana -X, zvenku, nakloněn 75° od vodorovné)
+// ============================================================
+function createLadder() {
+  const g = new THREE.Group(); g.name = 'ladder';
+  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+
+  const LW = CONFIG.LADDER_W;
+  const LH = CONFIG.LADDER_H;
+
+  // 75° od vodorovné = 15° od svislé
+  // Žebřík opřen o LEVOU stěnu (-X) zvenku:
+  //   - vršek: x = -hw (u stěny), y = H1 (podlaha 2. patra)
+  //   - spodek: x = -hw - LH*sin(15°), y = 0 (na zemi)
+  // Rotace kolem Z: -15° nakloní vršek směrem k +X (ke stěně)
+  const tilt = 15 * Math.PI / 180; // 15° od svislé
+  const projX = LH * Math.sin(tilt); // horizontální přesah = 0.479m
+  const projY = LH * Math.cos(tilt); // výškový dosah = 1.787m
+
+  // Spodek žebříku na zemi, vně levé stěny
+  const bottomX = -hw - projX;
+  const bottomY = 0;
+  // Pozice podél Z: přibližně uprostřed terasy
+  const ladderZ = -hd + CONFIG.TD * 0.5;
+
+  // Skupinka postavena svisle (podél +Y), pak rotována
+  const ladderGroup = new THREE.Group();
+
+  // Dvě boční lišty
+  [-1, 1].forEach(side => {
+    const rail = box(0.05, LH, 0.05, MAT.ladder);
+    rail.position.set(0, LH / 2, side * LW / 2);
+    ladderGroup.add(rail);
+  });
+
+  // Příčle
+  for (let i = 0; i < CONFIG.LADDER_RUNGS; i++) {
+    const t = (i + 0.5) / CONFIG.LADDER_RUNGS;
+    const rung = box(LW, 0.04, 0.04, MAT.ladder);
+    rung.position.set(0, LH * t, 0);
+    ladderGroup.add(rung);
+  }
+
+  // Rotace: -tilt kolem Z nakloní +Y vršek ke +X (žebřík se opírá o stěnu zprava)
+  ladderGroup.rotation.z = -tilt;
+  // Posun: spodek na správné místo vně levé stěny
+  ladderGroup.position.set(bottomX, bottomY, ladderZ);
+
+  g.add(ladderGroup);
+  return g;
+}
+
+// ============================================================
+// Labels — 3D text sprites
+// ============================================================
+function makeLabel(text, color = '#d4c9a8', fontSize = 14) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 64;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = 'rgba(26,31,22,0.75)';
+  ctx.roundRect ? ctx.roundRect(4, 4, c.width-8, c.height-8, 6) : ctx.fillRect(4,4,c.width-8,c.height-8);
+  ctx.fill();
+  ctx.strokeStyle = '#3a4030';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.font = `${fontSize}px Segoe UI, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, c.width/2, c.height/2);
+  const tex = new THREE.CanvasTexture(c);
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(1.2, 0.3, 1);
+  return sprite;
+}
+
+function createLabels() {
+  const g = new THREE.Group(); g.name = 'labels';
+  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+
+  const items = [
+    { text: 'KABINA  310×172 cm', x: 0, y: CONFIG.H1 + 0.7, z: hd/2 + 0.2 },
+    { text: 'TERASA  310×70 cm', x: 0, y: CONFIG.H1 + 0.3, z: -hd + CONFIG.TD/2 },
+    { text: 'PŘÍZEMÍ  150 cm', x: 0, y: 0.7, z: -hd/2 },
+    { text: 'Klouzačka  260 cm', x: hw + 0.4, y: CONFIG.H1/2, z: -hd - 0.4, color: COLORS.slide },
+    { text: 'Žebřík  6 příček', x: -hw - 0.8, y: CONFIG.H1/2, z: 0, color: COLORS.ladder },
+  ];
+  items.forEach(it => {
+    const s = makeLabel(it.text, it.color || '#d4c9a8');
+    s.position.set(it.x, it.y, it.z);
+    g.add(s);
+  });
+  return g;
+}
+
+// ============================================================
+// 2D Dimension lines (SVG overlay for 2D views)
+// ============================================================
+function getDimensionsSVG(view) {
+  const w = window.innerWidth, h = window.innerHeight;
+  const pad = 60;
+  const lines = [];
+
+  function dimLine(x1, y1, x2, y2, label, above = true) {
+    const ox = above ? 0 : 0, oy = above ? -18 : 18;
+    lines.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#8a9a72" stroke-width="1" stroke-dasharray="4,3"/>`);
+    lines.push(`<text x="${(x1+x2)/2+ox}" y="${(y1+y2)/2+oy}" fill="#d4c9a8" font-size="11" text-anchor="middle" font-family="Segoe UI,sans-serif">${label}</text>`);
+  }
+
+  if (view === 'front') {
+    // Simple dimension indicators
+    dimLine(pad, h-pad, w-pad, h-pad, '310 cm');
+    dimLine(pad, pad, pad, h-pad, '300 cm', false);
+  }
+
+  return `<svg width="${w}" height="${h}" style="position:absolute;top:0;left:0;pointer-events:none">${lines.join('')}</svg>`;
+}
+
+// ============================================================
+// Tab / View System
+// ============================================================
+let composer = null;
+const playhouse = new THREE.Group();
+
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.view === view);
+  });
+  const is3D = view === '3d';
+  document.getElementById('view-presets').style.display = is3D ? 'flex' : 'none';
+  document.getElementById('toggles').style.display = is3D ? 'flex' : 'none';
+  document.getElementById('print-btn').style.display = is3D ? 'none' : 'block';
+  document.getElementById('controls-hint').style.display = is3D ? 'block' : 'none';
+
+  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+  const H = CONFIG.H + CONFIG.ROOF_PEAK;
+  const pad = 1.5;
+
+  if (view === '3d') {
+    activeCamera = perspCamera;
+    // Show all
+    playhouse.traverse(c => { if (c.isMesh) c.visible = true; });
+    sectionPlane.constant = 1000;
+  } else if (view === 'floor1') {
+    setupOrthoView(
+      new THREE.Vector3(0, 10, 0),
+      new THREE.Vector3(0, 0, 0),
+      -hw - pad, hw + pad, hd + pad, -hd - pad
+    );
+    sectionPlane.constant = 1000;
+  } else if (view === 'floor2') {
+    setupOrthoView(
+      new THREE.Vector3(0, 10, 0),
+      new THREE.Vector3(0, 0, 0),
+      -hw - pad, hw + pad, hd + pad, -hd - pad
+    );
+    sectionPlane.constant = 1000;
+  } else if (view === 'front') {
+    setupOrthoView(
+      new THREE.Vector3(0, H/2, -10),
+      new THREE.Vector3(0, H/2, 0),
+      -hw - pad, hw + pad, H + pad, -pad
+    );
+    sectionPlane.constant = 1000;
+  } else if (view === 'side') {
+    setupOrthoView(
+      new THREE.Vector3(10, H/2, 0),
+      new THREE.Vector3(0, H/2, 0),
+      -hd - pad, hd + pad, H + pad, -pad
+    );
+    sectionPlane.constant = 1000;
+  } else if (view === 'section') {
+    setupOrthoView(
+      new THREE.Vector3(10, H/2, 0),
+      new THREE.Vector3(0, H/2, 0),
+      -hd - pad, hd + pad, H + pad, -pad
+    );
+    // Clip at X=0
+    sectionPlane.constant = 0;
+  }
+}
+
+let sectionPlane;
+
+function setupOrthoView(pos, target, left, right, top, bottom) {
+  const aspect = window.innerWidth / window.innerHeight;
+  const orthoH = top - bottom;
+  const orthoW = orthoH * aspect;
+  const cx = (left + right) / 2;
+  const cy = (top + bottom) / 2;
+  orthoCamera = new THREE.OrthographicCamera(cx - orthoW/2, cx + orthoW/2, cy + orthoH/2, cy - orthoH/2, 0.01, 100);
+  orthoCamera.position.copy(pos);
+  orthoCamera.lookAt(target);
+  activeCamera = orthoCamera;
+}
+
+// ============================================================
+// View Presets (3D)
+// ============================================================
+const VIEW_PRESETS = {
+  iso:   { pos: [6, 4, -6],   target: [0, 1.5, 0] },
+  front: { pos: [0, 2, -8],   target: [0, 1.5, 0] },
+  back:  { pos: [0, 2,  8],   target: [0, 1.5, 0] },
+  left:  { pos: [-8, 2, 0],   target: [0, 1.5, 0] },
+  right: { pos: [8, 2, 0],    target: [0, 1.5, 0] },
+  top:   { pos: [0, 10, 0],   target: [0, 0, 0] },
+};
+
+function setPreset(name) {
+  const p = VIEW_PRESETS[name];
+  if (!p) return;
+  perspCamera.position.set(...p.pos);
+  orbitTarget.set(...p.target);
+}
+
+// ============================================================
+// OrbitControls — custom implementation
+// ============================================================
+const orbitTarget = new THREE.Vector3(0, 1.5, 0);
+let isDragging = false, isRightDrag = false;
+let lastMouse = { x: 0, y: 0 };
+let spherical = new THREE.Spherical();
+
+function updateOrbit() {
+  const offset = perspCamera.position.clone().sub(orbitTarget);
+  spherical.setFromVector3(offset);
+}
+updateOrbit();
+
+renderer.domElement.addEventListener('mousedown', e => {
+  isDragging = true;
+  isRightDrag = e.button === 2;
+  lastMouse = { x: e.clientX, y: e.clientY };
+});
+renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+window.addEventListener('mouseup', () => isDragging = false);
+window.addEventListener('mousemove', e => {
+  if (!isDragging || currentView !== '3d') return;
+  const dx = e.clientX - lastMouse.x;
+  const dy = e.clientY - lastMouse.y;
+  lastMouse = { x: e.clientX, y: e.clientY };
+  if (isRightDrag) {
+    // Pan
+    const right = new THREE.Vector3().crossVectors(
+      perspCamera.getWorldDirection(new THREE.Vector3()),
+      perspCamera.up
+    ).normalize();
+    const up = perspCamera.up.clone();
+    const dist = perspCamera.position.distanceTo(orbitTarget);
+    orbitTarget.addScaledVector(right, -dx * 0.003 * dist * 0.5);
+    orbitTarget.addScaledVector(up, dy * 0.003 * dist * 0.5);
+  } else {
+    spherical.theta -= dx * 0.008;
+    spherical.phi -= dy * 0.008;
+    spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+  }
+  const pos = new THREE.Vector3().setFromSpherical(spherical).add(orbitTarget);
+  perspCamera.position.copy(pos);
+  perspCamera.lookAt(orbitTarget);
+});
+renderer.domElement.addEventListener('wheel', e => {
+  if (currentView !== '3d') return;
+  spherical.radius *= (1 + e.deltaY * 0.001);
+  spherical.radius = Math.max(1, Math.min(20, spherical.radius));
+  const pos = new THREE.Vector3().setFromSpherical(spherical).add(orbitTarget);
+  perspCamera.position.copy(pos);
+  perspCamera.lookAt(orbitTarget);
+});
+
+// Touch support
+let touches = [];
+renderer.domElement.addEventListener('touchstart', e => { touches = Array.from(e.touches); });
+renderer.domElement.addEventListener('touchmove', e => {
+  if (currentView !== '3d') return;
+  e.preventDefault();
+  const t = Array.from(e.touches);
+  if (t.length === 1 && touches.length === 1) {
+    const dx = t[0].clientX - touches[0].clientX;
+    const dy = t[0].clientY - touches[0].clientY;
+    spherical.theta -= dx * 0.008;
+    spherical.phi -= dy * 0.008;
+    spherical.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.phi));
+    const pos = new THREE.Vector3().setFromSpherical(spherical).add(orbitTarget);
+    perspCamera.position.copy(pos);
+    perspCamera.lookAt(orbitTarget);
+  } else if (t.length === 2 && touches.length === 2) {
+    const prevDist = Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+    const currDist = Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    spherical.radius *= prevDist / currDist;
+    spherical.radius = Math.max(1, Math.min(20, spherical.radius));
+    const pos = new THREE.Vector3().setFromSpherical(spherical).add(orbitTarget);
+    perspCamera.position.copy(pos);
+    perspCamera.lookAt(orbitTarget);
+  }
+  touches = t;
+}, { passive: false });
+
+// ============================================================
+// Toggles
+// ============================================================
+let wireframeOn = false;
+let labelsOn = true;
+
+document.getElementById('toggle-wire').addEventListener('click', function() {
+  wireframeOn = !wireframeOn;
+  this.classList.toggle('on', wireframeOn);
+  playhouse.traverse(c => {
+    if (c.isMesh && c.material && c.name !== 'ground') {
+      c.material.wireframe = wireframeOn;
+    }
+  });
+});
+
+document.getElementById('toggle-labels').addEventListener('click', function() {
+  labelsOn = !labelsOn;
+  this.classList.toggle('on', labelsOn);
+  const labelsGroup = playhouse.getObjectByName('labels');
+  if (labelsGroup) labelsGroup.visible = labelsOn;
+});
+
+// ============================================================
+// Tab event listeners
+// ============================================================
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => switchView(tab.dataset.view));
+});
+
+// View presets
+document.querySelectorAll('.vbtn').forEach(btn => {
+  btn.addEventListener('click', () => setPreset(btn.dataset.preset));
+});
+
+// ============================================================
+// Post-processing (SSAO)
+// ============================================================
+function setupPostProcessing() {
+  try {
+    if (typeof THREE.EffectComposer === 'undefined') return null;
+    const c = new THREE.EffectComposer(renderer);
+    const rp = new THREE.RenderPass(scene, perspCamera);
+    c.addPass(rp);
+    if (typeof THREE.SSAOPass !== 'undefined') {
+      const ssao = new THREE.SSAOPass(scene, perspCamera, window.innerWidth, window.innerHeight);
+      ssao.kernelRadius = 0.3;
+      ssao.minDistance = 0.001;
+      ssao.maxDistance = 0.15;
+      c.addPass(ssao);
+    }
+    if (typeof THREE.GammaCorrectionShader !== 'undefined' && typeof THREE.ShaderPass !== 'undefined') {
+      const gamma = new THREE.ShaderPass(THREE.GammaCorrectionShader);
+      c.addPass(gamma);
+    }
+    return c;
+  } catch(e) {
+    return null;
+  }
+}
+
+// ============================================================
+// Build scene
+// ============================================================
+function buildScene() {
+  setupEnvironment();
+  setupMaterials();
+
+  // Section clipping plane
+  sectionPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 1000);
+  renderer.clippingPlanes = [sectionPlane];
+  renderer.localClippingEnabled = true;
+
+  scene.add(createGround());
+  scene.add(createContactShadow());
+
+  playhouse.add(createFootings());
+  playhouse.add(createBeams());
+  playhouse.add(createPosts());
+  playhouse.add(createFloors());
+  playhouse.add(createWalls());
+  playhouse.add(createRoof());
+  playhouse.add(createRailing());
+  playhouse.add(createSlide());
+  playhouse.add(createLadder());
+  playhouse.add(createLabels());
+
+  // Enable shadows on all meshes
+  playhouse.traverse(c => {
+    if (c.isMesh) {
+      c.castShadow = true;
+      c.receiveShadow = true;
+    }
+  });
+
+  scene.add(playhouse);
+
+  composer = setupPostProcessing();
+}
+
+// ============================================================
+// Resize
+// ============================================================
+window.addEventListener('resize', () => {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h);
+  perspCamera.aspect = w / h;
+  perspCamera.updateProjectionMatrix();
+  if (orthoCamera) {
+    // Rerun current ortho view
+    switchView(currentView);
+  }
+  if (composer) composer.setSize(w, h);
+});
+
+// ============================================================
+// Animation loop
+// ============================================================
+function animate() {
+  requestAnimationFrame(animate);
+  if (currentView === '3d') {
+    if (composer) {
+      // Update render pass camera
+      composer.passes[0].camera = activeCamera;
+      try { composer.render(); } catch(e) { renderer.render(scene, activeCamera); }
+    } else {
+      renderer.render(scene, activeCamera);
+    }
+  } else {
+    renderer.render(scene, activeCamera);
+  }
+}
+
+buildScene();
+animate();
+</script>
+</body>
+</html>
