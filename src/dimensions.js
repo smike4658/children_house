@@ -77,22 +77,6 @@ function createDimensions() {
   ));
 
 
-  // Celkova vyska po okap (posunuto dal)
-  g.add(makeDimLine(
-    new THREE.Vector3(-hw, 0, -hd),
-    new THREE.Vector3(-hw, CONFIG.H, -hd),
-    new THREE.Vector3(-1.0, 0, -1.0),
-    '300 cm'
-  ));
-
-  // Prevyseni strechy
-  g.add(makeDimLine(
-    new THREE.Vector3(-hw, CONFIG.H, divZ),
-    new THREE.Vector3(-hw, CONFIG.H + CONFIG.ROOF_PEAK, divZ),
-    new THREE.Vector3(-0.9, 0, 0.3),
-    '+45 cm'
-  ));
-
   // Terasa vs kabina (prava strana, uroven 2. patra)
   g.add(makeDimLine(
     new THREE.Vector3(hw, CONFIG.H1, -hd),

@@ -24,12 +24,7 @@ function createBeams() {
     g.add(m);
   }
 
-  // Rám přední stěny kabiny
-  const divZ = CONFIG.divZ;
-  const cabinH = CONFIG.H - CONFIG.H1;
-  const m = box(CONFIG.W, B, B, MAT.beam);
-  m.position.set(0, CONFIG.H1 + cabinH / 2, divZ);
-  g.add(m);
+  // Rám přední stěny kabiny odstraněn (křížil by se s dveřmi)
 
   return g;
 }
