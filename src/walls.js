@@ -132,10 +132,15 @@ function createWalls() {
   const cabH = (CONFIG.H + CONFIG.ROOF_PEAK) - CONFIG.H1; // Zvýšeno až ke střeše (vpředu je vyšší hrana pultové střechy)
   // Dveře: vlevo, okno vpravo
   const doorX = -CONFIG.W / 2 + CONFIG.DOOR_W / 2 + CONFIG.DOOR_OFFSET_X + 0.15;
-  const winX = CONFIG.W / 2 - CONFIG.FRONT_WIN_W / 2 - 0.15;
+  const doorRightEdge = doorX + CONFIG.DOOR_W / 2;
+  const winX = doorRightEdge + (CONFIG.W / 2 - doorRightEdge) / 2;
+
+  // Pozice Y = střed původní zdi (0.75 m od podlahy přidáme H1)
+  const holeY = (CONFIG.H - CONFIG.H1) / 2;
+
   const holes = [
     { x: doorX, y: CONFIG.DOOR_H / 2, w: CONFIG.DOOR_W, h: CONFIG.DOOR_H },
-    { x: winX, y: (CONFIG.H - CONFIG.H1) / 2, w: CONFIG.FRONT_WIN_W, h: CONFIG.FRONT_WIN_H }, // Okno nechám ve stejné výšce jako předtím (střed původní výšky)
+    { x: winX, y: holeY, w: CONFIG.FRONT_WIN_W, h: CONFIG.FRONT_WIN_H },
   ];
   const frontCabin = wallWithTwoHoles(CONFIG.W, cabH, holes, MAT.walls, T);
   frontCabin.position.set(0, CONFIG.H1, divZ - T / 2);
@@ -144,7 +149,8 @@ function createWalls() {
   // Door frame
   addDoorFrame(g, doorX, CONFIG.H1, divZ - T, CONFIG.DOOR_W, CONFIG.DOOR_H, T);
   // Front cabin window frame
-  addWindowFrame(g, winX, CONFIG.H1 + cabH / 2, divZ - T, CONFIG.FRONT_WIN_W, CONFIG.FRONT_WIN_H, T, 'z', false);
+  // Y pozice se počítá v absolute coordinates, takže CONFIG.H1 + holeY
+  addWindowFrame(g, winX, CONFIG.H1 + holeY, divZ - T, CONFIG.FRONT_WIN_W, CONFIG.FRONT_WIN_H, T, 'z', false);
 
   // === Štítové zdi (gable walls) — trojúhelníky mezi stěnou a střechou ===
   const H2 = CONFIG.H;
