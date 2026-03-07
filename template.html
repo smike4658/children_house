@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="cs">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dětský Patrový Domeček — 3D Návrh</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #1a1f16;
+      color: #d4c9a8;
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+    }
+
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    /* UI Overlay */
+    #ui {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* Tab bar */
+    #tabs {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 4px;
+      background: rgba(26, 31, 22, 0.88);
+      border: 1px solid #3a4030;
+      border-radius: 8px;
+      padding: 4px;
+      pointer-events: all;
+      backdrop-filter: blur(8px);
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .tab {
+      padding: 6px 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      color: #8a9a72;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .tab:hover {
+      color: #d4c9a8;
+      background: #2a3022;
+    }
+
+    .tab.active {
+      background: #3a4830;
+      color: #d4c9a8;
+      border-color: #5a6a4a;
+    }
+
+    /* Spec chips */
+    #specs {
+      position: absolute;
+      top: 68px;
+      left: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      pointer-events: none;
+    }
+
+    .chip {
+      background: rgba(26, 31, 22, 0.82);
+      border: 1px solid #3a4030;
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 11px;
+      color: #8a9a72;
+    }
+
+    .chip span {
+      color: #d4c9a8;
+      font-weight: 600;
+    }
+
+    /* Legend */
+    #legend {
+      position: absolute;
+      top: 68px;
+      right: 12px;
+      background: rgba(26, 31, 22, 0.82);
+      border: 1px solid #3a4030;
+      border-radius: 6px;
+      padding: 8px 10px;
+      min-width: 130px;
+      pointer-events: none;
+    }
+
+    #legend h4 {
+      font-size: 10px;
+      color: #8a9a72;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 3px;
+      font-size: 11px;
+      color: #d4c9a8;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    /* Controls hint */
+    #controls-hint {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(26, 31, 22, 0.75);
+      border: 1px solid #3a4030;
+      border-radius: 5px;
+      padding: 5px 12px;
+      font-size: 11px;
+      color: #8a9a72;
+      pointer-events: none;
+      text-align: center;
+    }
+
+    /* View buttons (3D mode) */
+    #view-presets {
+      position: absolute;
+      bottom: 50px;
+      right: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      pointer-events: all;
+    }
+
+    .vbtn {
+      background: rgba(26, 31, 22, 0.82);
+      border: 1px solid #3a4030;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 11px;
+      color: #8a9a72;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .vbtn:hover {
+      color: #d4c9a8;
+      background: #2a3022;
+    }
+
+    /* Toggles */
+    #toggles {
+      position: absolute;
+      bottom: 50px;
+      left: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      pointer-events: all;
+    }
+
+    .toggle-btn {
+      background: rgba(26, 31, 22, 0.82);
+      border: 1px solid #3a4030;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 11px;
+      color: #8a9a72;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .toggle-btn:hover {
+      color: #d4c9a8;
+    }
+
+    .toggle-btn.on {
+      border-color: #5a6a4a;
+      color: #d4c9a8;
+    }
+
+    .toggle-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #3a4030;
+      flex-shrink: 0;
+    }
+
+    .toggle-btn.on .toggle-dot {
+      background: #8a9a72;
+    }
+
+    /* Print button (2D views) */
+    #print-btn {
+      position: absolute;
+      bottom: 50px;
+      right: 12px;
+      background: rgba(26, 31, 22, 0.82);
+      border: 1px solid #5a6a4a;
+      border-radius: 4px;
+      padding: 6px 14px;
+      font-size: 12px;
+      color: #d4c9a8;
+      cursor: pointer;
+      pointer-events: all;
+      display: none;
+    }
+
+    #print-btn:hover {
+      background: #2a3022;
+    }
+
+    /* Canvas overlay pro kóty a popisky 2D pohledů */
+    #dim-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: none;
+    }
+
+    @media print {
+      #ui {
+        display: none;
+      }
+
+      #canvas-container {
+        position: static;
+      }
+
+      canvas {
+        width: 100% !important;
+        height: auto !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="canvas-container"></div>
+
+  <div id="ui">
+    <!-- Tab bar -->
+    <div id="tabs">
+      <div class="tab active" data-view="3d">3D</div>
+      <div class="tab" data-view="floor1">Pudorys 1. patro</div>
+      <div class="tab" data-view="floor2">Pudorys 2. patro</div>
+      <div class="tab" data-view="front">Nárys zepředu</div>
+      <div class="tab" data-view="side">Nárys z boku</div>
+      <div class="tab" data-view="section">Rez</div>
+    </div>
+
+    <!-- Spec chips -->
+    <div id="specs">
+      <div class="chip">Šířka: <span>310 cm</span></div>
+      <div class="chip">Hloubka: <span>242 cm</span></div>
+      <div class="chip">Výška: <span>300 / 345 cm</span></div>
+      <div class="chip">Strop 1p: <span>150 cm</span></div>
+      <div class="chip">Kabina: <span>310 × 172 cm</span></div>
+      <div class="chip">Terasa: <span>310 × 70 cm</span></div>
+    </div>
+
+    <!-- Legend -->
+    <div id="legend">
+      <h4>Legenda</h4>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#C4944A"></div>Nosné sloupky
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#B8860B"></div>Stěny / palubky
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#A0784C"></div>Podlahy
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#6B3A2A"></div>Střecha
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#D4A056"></div>Zábradlí
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#FFD700"></div>Klouzačka
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#5B8C3E"></div>Žebřík
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#999999"></div>Betonové patky
+      </div>
+    </div>
+
+    <!-- Controls hint -->
+    <div id="controls-hint">Levé tl.: otáčení &nbsp;|&nbsp; Pravé tl.: posun &nbsp;|&nbsp; Kolečko: zoom &nbsp;|&nbsp;
+      Dotyk: 1 prst otáčení, 2 prsty zoom</div>
+
+    <!-- View presets (3D only) -->
+    <div id="view-presets">
+      <div class="vbtn" data-preset="iso">Iso</div>
+      <div class="vbtn" data-preset="front">Zepředu</div>
+      <div class="vbtn" data-preset="back">Zezadu</div>
+      <div class="vbtn" data-preset="left">Zleva</div>
+      <div class="vbtn" data-preset="right">Zprava</div>
+      <div class="vbtn" data-preset="top">Shora</div>
+    </div>
+
+    <!-- Toggles (3D only) -->
+    <div id="toggles">
+      <div class="toggle-btn" id="toggle-wire">
+        <div class="toggle-dot"></div>Drátový model
+      </div>
+      <div class="toggle-btn on" id="toggle-labels">
+        <div class="toggle-dot"></div>Popisky
+      </div>
+      <div class="toggle-btn" id="toggle-dims">
+        <div class="toggle-dot"></div>Kóty
+      </div>
+    </div>
+
+    <!-- Print button (2D only) -->
+    <button id="print-btn" onclick="window.print()">Tisk / Export</button>
+
+    <!-- Kóty a popisky pro 2D pohledy -->
+    <canvas id="dim-canvas"></canvas>
+  </div>
+
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/SSAOPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/GammaCorrectionShader.js"></script>
+
+  <script>
+// === BEGIN MODULES ===

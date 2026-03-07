@@ -1,152 +1,386 @@
 <!DOCTYPE html>
 <html lang="cs">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dětský Patrový Domeček — 3D Návrh</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #1a1f16; color: #d4c9a8; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
-  #canvas-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
-  canvas { display: block; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dětský Patrový Domeček — 3D Návrh</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-  /* UI Overlay */
-  #ui { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+    body {
+      background: #1a1f16;
+      color: #d4c9a8;
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+    }
 
-  /* Tab bar */
-  #tabs { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px;
-    background: rgba(26,31,22,0.88); border: 1px solid #3a4030; border-radius: 8px; padding: 4px;
-    pointer-events: all; backdrop-filter: blur(8px); flex-wrap: wrap; justify-content: center; }
-  .tab { padding: 6px 14px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 500;
-    color: #8a9a72; border: 1px solid transparent; transition: all 0.15s; white-space: nowrap; }
-  .tab:hover { color: #d4c9a8; background: #2a3022; }
-  .tab.active { background: #3a4830; color: #d4c9a8; border-color: #5a6a4a; }
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
 
-  /* Spec chips */
-  #specs { position: absolute; top: 68px; left: 12px; display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
-  .chip { background: rgba(26,31,22,0.82); border: 1px solid #3a4030; border-radius: 4px;
-    padding: 3px 8px; font-size: 11px; color: #8a9a72; }
-  .chip span { color: #d4c9a8; font-weight: 600; }
+    canvas {
+      display: block;
+    }
 
-  /* Legend */
-  #legend { position: absolute; top: 68px; right: 12px; background: rgba(26,31,22,0.82);
-    border: 1px solid #3a4030; border-radius: 6px; padding: 8px 10px; min-width: 130px; pointer-events: none; }
-  #legend h4 { font-size: 10px; color: #8a9a72; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
-  .legend-item { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; font-size: 11px; color: #d4c9a8; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+    /* UI Overlay */
+    #ui {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
 
-  /* Controls hint */
-  #controls-hint { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
-    background: rgba(26,31,22,0.75); border: 1px solid #3a4030; border-radius: 5px;
-    padding: 5px 12px; font-size: 11px; color: #8a9a72; pointer-events: none; text-align: center; }
+    /* Tab bar */
+    #tabs {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 4px;
+      background: rgba(26, 31, 22, 0.88);
+      border: 1px solid #3a4030;
+      border-radius: 8px;
+      padding: 4px;
+      pointer-events: all;
+      backdrop-filter: blur(8px);
+      flex-wrap: wrap;
+      justify-content: center;
+    }
 
-  /* View buttons (3D mode) */
-  #view-presets { position: absolute; bottom: 50px; right: 12px; display: flex; flex-direction: column; gap: 3px;
-    pointer-events: all; }
-  .vbtn { background: rgba(26,31,22,0.82); border: 1px solid #3a4030; border-radius: 4px;
-    padding: 4px 10px; font-size: 11px; color: #8a9a72; cursor: pointer; text-align: center; }
-  .vbtn:hover { color: #d4c9a8; background: #2a3022; }
+    .tab {
+      padding: 6px 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      color: #8a9a72;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
 
-  /* Toggles */
-  #toggles { position: absolute; bottom: 50px; left: 12px; display: flex; flex-direction: column; gap: 3px;
-    pointer-events: all; }
-  .toggle-btn { background: rgba(26,31,22,0.82); border: 1px solid #3a4030; border-radius: 4px;
-    padding: 4px 10px; font-size: 11px; color: #8a9a72; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-  .toggle-btn:hover { color: #d4c9a8; }
-  .toggle-btn.on { border-color: #5a6a4a; color: #d4c9a8; }
-  .toggle-dot { width: 8px; height: 8px; border-radius: 50%; background: #3a4030; flex-shrink: 0; }
-  .toggle-btn.on .toggle-dot { background: #8a9a72; }
+    .tab:hover {
+      color: #d4c9a8;
+      background: #2a3022;
+    }
 
-  /* Print button (2D views) */
-  #print-btn { position: absolute; bottom: 50px; right: 12px; background: rgba(26,31,22,0.82);
-    border: 1px solid #5a6a4a; border-radius: 4px; padding: 6px 14px; font-size: 12px;
-    color: #d4c9a8; cursor: pointer; pointer-events: all; display: none; }
-  #print-btn:hover { background: #2a3022; }
+    .tab.active {
+      background: #3a4830;
+      color: #d4c9a8;
+      border-color: #5a6a4a;
+    }
 
-  /* Canvas overlay pro kóty a popisky 2D pohledů */
-  #dim-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
+    /* Spec chips */
+    #specs {
+      position: absolute;
+      top: 68px;
+      left: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      pointer-events: none;
+    }
 
-  @media print {
-    #ui { display: none; }
-    #canvas-container { position: static; }
-    canvas { width: 100% !important; height: auto !important; }
-  }
-</style>
+    .chip {
+      background: rgba(26, 31, 22, 0.82);
+      border: 1px solid #3a4030;
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 11px;
+      color: #8a9a72;
+    }
+
+    .chip span {
+      color: #d4c9a8;
+      font-weight: 600;
+    }
+
+    /* Legend */
+    #legend {
+      position: absolute;
+      top: 68px;
+      right: 12px;
+      background: rgba(26, 31, 22, 0.82);
+      border: 1px solid #3a4030;
+      border-radius: 6px;
+      padding: 8px 10px;
+      min-width: 130px;
+      pointer-events: none;
+    }
+
+    #legend h4 {
+      font-size: 10px;
+      color: #8a9a72;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 3px;
+      font-size: 11px;
+      color: #d4c9a8;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    /* Controls hint */
+    #controls-hint {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(26, 31, 22, 0.75);
+      border: 1px solid #3a4030;
+      border-radius: 5px;
+      padding: 5px 12px;
+      font-size: 11px;
+      color: #8a9a72;
+      pointer-events: none;
+      text-align: center;
+    }
+
+    /* View buttons (3D mode) */
+    #view-presets {
+      position: absolute;
+      bottom: 50px;
+      right: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      pointer-events: all;
+    }
+
+    .vbtn {
+      background: rgba(26, 31, 22, 0.82);
+      border: 1px solid #3a4030;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 11px;
+      color: #8a9a72;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .vbtn:hover {
+      color: #d4c9a8;
+      background: #2a3022;
+    }
+
+    /* Toggles */
+    #toggles {
+      position: absolute;
+      bottom: 50px;
+      left: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      pointer-events: all;
+    }
+
+    .toggle-btn {
+      background: rgba(26, 31, 22, 0.82);
+      border: 1px solid #3a4030;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 11px;
+      color: #8a9a72;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .toggle-btn:hover {
+      color: #d4c9a8;
+    }
+
+    .toggle-btn.on {
+      border-color: #5a6a4a;
+      color: #d4c9a8;
+    }
+
+    .toggle-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #3a4030;
+      flex-shrink: 0;
+    }
+
+    .toggle-btn.on .toggle-dot {
+      background: #8a9a72;
+    }
+
+    /* Print button (2D views) */
+    #print-btn {
+      position: absolute;
+      bottom: 50px;
+      right: 12px;
+      background: rgba(26, 31, 22, 0.82);
+      border: 1px solid #5a6a4a;
+      border-radius: 4px;
+      padding: 6px 14px;
+      font-size: 12px;
+      color: #d4c9a8;
+      cursor: pointer;
+      pointer-events: all;
+      display: none;
+    }
+
+    #print-btn:hover {
+      background: #2a3022;
+    }
+
+    /* Canvas overlay pro kóty a popisky 2D pohledů */
+    #dim-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: none;
+    }
+
+    @media print {
+      #ui {
+        display: none;
+      }
+
+      #canvas-container {
+        position: static;
+      }
+
+      canvas {
+        width: 100% !important;
+        height: auto !important;
+      }
+    }
+  </style>
 </head>
+
 <body>
-<div id="canvas-container"></div>
+  <div id="canvas-container"></div>
 
-<div id="ui">
-  <!-- Tab bar -->
-  <div id="tabs">
-    <div class="tab active" data-view="3d">3D</div>
-    <div class="tab" data-view="floor1">Pudorys 1. patro</div>
-    <div class="tab" data-view="floor2">Pudorys 2. patro</div>
-    <div class="tab" data-view="front">Nárys zepředu</div>
-    <div class="tab" data-view="side">Nárys z boku</div>
-    <div class="tab" data-view="section">Rez</div>
+  <div id="ui">
+    <!-- Tab bar -->
+    <div id="tabs">
+      <div class="tab active" data-view="3d">3D</div>
+      <div class="tab" data-view="floor1">Pudorys 1. patro</div>
+      <div class="tab" data-view="floor2">Pudorys 2. patro</div>
+      <div class="tab" data-view="front">Nárys zepředu</div>
+      <div class="tab" data-view="side">Nárys z boku</div>
+      <div class="tab" data-view="section">Rez</div>
+    </div>
+
+    <!-- Spec chips -->
+    <div id="specs">
+      <div class="chip">Šířka: <span>310 cm</span></div>
+      <div class="chip">Hloubka: <span>242 cm</span></div>
+      <div class="chip">Výška: <span>300 / 345 cm</span></div>
+      <div class="chip">Strop 1p: <span>150 cm</span></div>
+      <div class="chip">Kabina: <span>310 × 172 cm</span></div>
+      <div class="chip">Terasa: <span>310 × 70 cm</span></div>
+    </div>
+
+    <!-- Legend -->
+    <div id="legend">
+      <h4>Legenda</h4>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#C4944A"></div>Nosné sloupky
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#B8860B"></div>Stěny / palubky
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#A0784C"></div>Podlahy
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#6B3A2A"></div>Střecha
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#D4A056"></div>Zábradlí
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#FFD700"></div>Klouzačka
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#5B8C3E"></div>Žebřík
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#999999"></div>Betonové patky
+      </div>
+    </div>
+
+    <!-- Controls hint -->
+    <div id="controls-hint">Levé tl.: otáčení &nbsp;|&nbsp; Pravé tl.: posun &nbsp;|&nbsp; Kolečko: zoom &nbsp;|&nbsp;
+      Dotyk: 1 prst otáčení, 2 prsty zoom</div>
+
+    <!-- View presets (3D only) -->
+    <div id="view-presets">
+      <div class="vbtn" data-preset="iso">Iso</div>
+      <div class="vbtn" data-preset="front">Zepředu</div>
+      <div class="vbtn" data-preset="back">Zezadu</div>
+      <div class="vbtn" data-preset="left">Zleva</div>
+      <div class="vbtn" data-preset="right">Zprava</div>
+      <div class="vbtn" data-preset="top">Shora</div>
+    </div>
+
+    <!-- Toggles (3D only) -->
+    <div id="toggles">
+      <div class="toggle-btn" id="toggle-wire">
+        <div class="toggle-dot"></div>Drátový model
+      </div>
+      <div class="toggle-btn on" id="toggle-labels">
+        <div class="toggle-dot"></div>Popisky
+      </div>
+      <div class="toggle-btn" id="toggle-dims">
+        <div class="toggle-dot"></div>Kóty
+      </div>
+    </div>
+
+    <!-- Print button (2D only) -->
+    <button id="print-btn" onclick="window.print()">Tisk / Export</button>
+
+    <!-- Kóty a popisky pro 2D pohledy -->
+    <canvas id="dim-canvas"></canvas>
   </div>
 
-  <!-- Spec chips -->
-  <div id="specs">
-    <div class="chip">Šířka: <span>310 cm</span></div>
-    <div class="chip">Hloubka: <span>242 cm</span></div>
-    <div class="chip">Výška: <span>300 / 345 cm</span></div>
-    <div class="chip">Strop 1p: <span>150 cm</span></div>
-    <div class="chip">Kabina: <span>310 × 172 cm</span></div>
-    <div class="chip">Terasa: <span>310 × 70 cm</span></div>
-  </div>
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/SSAOPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/GammaCorrectionShader.js"></script>
 
-  <!-- Legend -->
-  <div id="legend">
-    <h4>Legenda</h4>
-    <div class="legend-item"><div class="legend-dot" style="background:#C4944A"></div>Nosné sloupky</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#B8860B"></div>Stěny / palubky</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#A0784C"></div>Podlahy</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#6B3A2A"></div>Střecha</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#D4A056"></div>Zábradlí</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#FFD700"></div>Klouzačka</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#5B8C3E"></div>Žebřík</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#999999"></div>Betonové patky</div>
-  </div>
+  <script>
+// === BEGIN MODULES ===
 
-  <!-- Controls hint -->
-  <div id="controls-hint">Levé tl.: otáčení &nbsp;|&nbsp; Pravé tl.: posun &nbsp;|&nbsp; Kolečko: zoom &nbsp;|&nbsp; Dotyk: 1 prst otáčení, 2 prsty zoom</div>
-
-  <!-- View presets (3D only) -->
-  <div id="view-presets">
-    <div class="vbtn" data-preset="iso">Iso</div>
-    <div class="vbtn" data-preset="front">Zepředu</div>
-    <div class="vbtn" data-preset="back">Zezadu</div>
-    <div class="vbtn" data-preset="left">Zleva</div>
-    <div class="vbtn" data-preset="right">Zprava</div>
-    <div class="vbtn" data-preset="top">Shora</div>
-  </div>
-
-  <!-- Toggles (3D only) -->
-  <div id="toggles">
-    <div class="toggle-btn" id="toggle-wire"><div class="toggle-dot"></div>Drátový model</div>
-    <div class="toggle-btn on" id="toggle-labels"><div class="toggle-dot"></div>Popisky</div>
-  </div>
-
-  <!-- Print button (2D only) -->
-  <button id="print-btn" onclick="window.print()">Tisk / Export</button>
-
-  <!-- Kóty a popisky pro 2D pohledy -->
-  <canvas id="dim-canvas"></canvas>
-</div>
-
-<!-- Three.js CDN -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/SSAOPass.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/GammaCorrectionShader.js"></script>
-
-<script>
 // ============================================================
 // CONFIG — všechny rozměry na jednom místě
 // ============================================================
@@ -157,7 +391,7 @@ const CONFIG = {
   H1: 1.50,
   TD: 0.70,
   get CD() { return this.D - this.TD; },  // 1.72
-  get divZ() { return -this.D/2 + this.TD; }, // Z přední stěny kabiny ≈ -0.51
+  get divZ() { return -this.D / 2 + this.TD; }, // Z přední stěny kabiny ≈ -0.51
   POST: 0.12,
   WALL_T: 0.04,
   BEAM: 0.07,
@@ -180,19 +414,19 @@ const CONFIG = {
 };
 
 const COLORS = {
-  posts:    '#C4944A',
-  walls:    '#B8860B',
-  floor:    '#A0784C',
-  roof:     '#6B3A2A',
+  posts: '#C4944A',
+  walls: '#B8860B',
+  floor: '#A0784C',
+  roof: '#6B3A2A',
   roofEdge: '#4A2818',
-  railing:  '#D4A056',
-  slide:    '#FFD700',
-  ladder:   '#5B8C3E',
-  frame:    '#f0e8d0',
+  railing: '#D4A056',
+  slide: '#FFD700',
+  ladder: '#5B8C3E',
+  frame: '#f0e8d0',
   concrete: '#999999',
-  grass:    '#4a7a2e',
-  sky:      '#87CEEB',
-  glass:    '#a0d0e8',
+  grass: '#4a7a2e',
+  sky: '#87CEEB',
+  glass: '#a0d0e8',
 };
 
 // ============================================================
@@ -271,7 +505,7 @@ function setupEnvironment() {
     } else {
       setupFallbackSky();
     }
-  } catch(e) {
+  } catch (e) {
     setupFallbackSky();
   }
 }
@@ -306,8 +540,8 @@ function makeWoodTexture(baseColor, grainColor, options = {}) {
   ctx.fillStyle = baseColor;
   ctx.fillRect(0, 0, size, size);
   for (let i = 0; i < 600; i++) {
-    ctx.fillStyle = `rgba(${Math.random()>0.5?255:0},${Math.random()>0.5?180:40},0,0.02)`;
-    ctx.fillRect(Math.random()*size, Math.random()*size, Math.random()*8+2, Math.random()*4+1);
+    ctx.fillStyle = `rgba(${Math.random() > 0.5 ? 255 : 0},${Math.random() > 0.5 ? 180 : 40},0,0.02)`;
+    ctx.fillRect(Math.random() * size, Math.random() * size, Math.random() * 8 + 2, Math.random() * 4 + 1);
   }
   for (let layer = 0; layer < 3; layer++) {
     ctx.strokeStyle = grainColor;
@@ -318,7 +552,7 @@ function makeWoodTexture(baseColor, grainColor, options = {}) {
       ctx.beginPath();
       ctx.moveTo(0, y);
       for (let x = 0; x < size; x += 4) {
-        ctx.lineTo(x, y + Math.sin(x * 0.01 + i * 0.7) * 4 + (Math.random()-0.5) * 1.5);
+        ctx.lineTo(x, y + Math.sin(x * 0.01 + i * 0.7) * 4 + (Math.random() - 0.5) * 1.5);
       }
       ctx.stroke();
     }
@@ -338,7 +572,7 @@ function makeWoodTexture(baseColor, grainColor, options = {}) {
       ctx.strokeStyle = '#5a4530';
       ctx.lineWidth = 0.5;
       ctx.beginPath();
-      ctx.ellipse(kx, ky, kr + r*6, kr*0.7 + r*4, Math.random()*0.2, 0, Math.PI*2);
+      ctx.ellipse(kx, ky, kr + r * 6, kr * 0.7 + r * 4, Math.random() * 0.2, 0, Math.PI * 2);
       ctx.stroke();
     }
   }
@@ -363,7 +597,7 @@ function makePalubkyTexture() {
   for (let p = 0; p < 12; p++) {
     const y0 = p * plankH;
     const lightness = 0.9 + Math.random() * 0.2;
-    ctx.fillStyle = `rgba(${lightness>1?20:0},${lightness>1?10:0},0,${Math.abs(lightness-1)*0.3})`;
+    ctx.fillStyle = `rgba(${lightness > 1 ? 20 : 0},${lightness > 1 ? 10 : 0},0,${Math.abs(lightness - 1) * 0.3})`;
     ctx.fillRect(0, y0, size, plankH);
     // Plank seam
     ctx.strokeStyle = 'rgba(0,0,0,0.25)';
@@ -374,12 +608,12 @@ function makePalubkyTexture() {
     // Wood grain
     ctx.strokeStyle = '#9a7008';
     for (let i = 0; i < 8; i++) {
-      ctx.globalAlpha = 0.06 + Math.random()*0.08;
+      ctx.globalAlpha = 0.06 + Math.random() * 0.08;
       ctx.lineWidth = 0.5 + Math.random();
       const y = y0 + Math.random() * plankH;
       ctx.beginPath(); ctx.moveTo(0, y);
       for (let x = 0; x < size; x += 8) {
-        ctx.lineTo(x, y + Math.sin(x*0.02+i)*2 + (Math.random()-0.5));
+        ctx.lineTo(x, y + Math.sin(x * 0.02 + i) * 2 + (Math.random() - 0.5));
       }
       ctx.stroke();
     }
@@ -412,6 +646,24 @@ function setupMaterials() {
 }
 
 // ============================================================
+// Helper: box mesh
+// ============================================================
+function box(w, h, d, mat, castShadow = true, receiveShadow = true) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.castShadow = castShadow;
+  m.receiveShadow = receiveShadow;
+  return m;
+}
+
+// Shorthand: vytvoř box, nastav pozici, přidej do skupiny
+function ab(group, w, h, d, mat, x, y, z) {
+  const m = box(w, h, d, mat);
+  m.position.set(x, y, z);
+  group.add(m);
+  return m;
+}
+
+// ============================================================
 // Ground
 // ============================================================
 function createGround() {
@@ -422,16 +674,16 @@ function createGround() {
   ctx.fillRect(0, 0, 512, 512);
   for (let i = 0; i < 3000; i++) {
     const g = 80 + Math.random() * 60;
-    ctx.fillStyle = `rgba(${30+Math.random()*40}, ${g}, ${20+Math.random()*20}, 0.15)`;
-    ctx.fillRect(Math.random()*512, Math.random()*512, 2+Math.random()*6, 2+Math.random()*6);
+    ctx.fillStyle = `rgba(${30 + Math.random() * 40}, ${g}, ${20 + Math.random() * 20}, 0.15)`;
+    ctx.fillRect(Math.random() * 512, Math.random() * 512, 2 + Math.random() * 6, 2 + Math.random() * 6);
   }
   ctx.strokeStyle = '#5a8a35';
   for (let i = 0; i < 500; i++) {
     ctx.globalAlpha = 0.08;
     ctx.lineWidth = 0.5;
-    const x = Math.random()*512, y = Math.random()*512;
+    const x = Math.random() * 512, y = Math.random() * 512;
     ctx.beginPath(); ctx.moveTo(x, y);
-    ctx.lineTo(x+(Math.random()-0.5)*3, y-3-Math.random()*5);
+    ctx.lineTo(x + (Math.random() - 0.5) * 3, y - 3 - Math.random() * 5);
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
@@ -461,24 +713,6 @@ function createContactShadow() {
 }
 
 // ============================================================
-// Helper: box mesh
-// ============================================================
-function box(w, h, d, mat, castShadow=true, receiveShadow=true) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-  m.castShadow = castShadow;
-  m.receiveShadow = receiveShadow;
-  return m;
-}
-
-// Shorthand: vytvoř box, nastav pozici, přidej do skupiny
-function ab(group, w, h, d, mat, x, y, z) {
-  const m = box(w, h, d, mat);
-  m.position.set(x, y, z);
-  group.add(m);
-  return m;
-}
-
-// ============================================================
 // Footings — betonové patky
 // ============================================================
 function createFootings() {
@@ -486,12 +720,12 @@ function createFootings() {
   const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
   const positions = [
     [-hw, 0, -hd], [hw, 0, -hd],
-    [-hw, 0,  hd], [hw, 0,  hd],
+    [-hw, 0, hd], [hw, 0, hd],
   ];
   const FW = 0.22, FD = 0.22, FH = 0.10;
   positions.forEach(([x, , z]) => {
     const m = box(FW, FH, FD, MAT.concrete);
-    m.position.set(x, FH/2, z);
+    m.position.set(x, FH / 2, z);
     g.add(m);
   });
   return g;
@@ -504,34 +738,37 @@ function createPosts() {
   const g = new THREE.Group(); g.name = 'posts';
   const P = CONFIG.POST;
   const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
-  const H = CONFIG.H + CONFIG.ROOF_PEAK;
+  const H_front = CONFIG.H1 + CONFIG.RAIL_H;   // přední sloupy (terasa) — úroveň zábradlí 2.40m
+  const H_back  = CONFIG.H + CONFIG.ROOF_PEAK; // zadní sloupy  — úroveň 3.45m
   const FH = 0.10;
 
-  // 4 rohové sloupky — celá výška
+  // 4 rohové sloupky — přední nižší, zadní vyšší (pultová střecha)
   const corners = [
-    [-hw, -hd], [hw, -hd],
-    [-hw,  hd], [hw,  hd],
+    [-hw, -hd, H_front], [hw, -hd, H_front],
+    [-hw,  hd, H_back],  [hw,  hd, H_back],
   ];
-  corners.forEach(([x, z]) => {
-    const m = box(P, H, P, MAT.posts);
-    m.position.set(x, H/2 + FH, z);
+  corners.forEach(([x, z, h]) => {
+    const ph = h - FH; // výška od patky po vrch
+    const m = box(P, ph, P, MAT.posts);
+    m.position.set(x, FH + ph / 2, z);
     g.add(m);
   });
 
-  // 2 střední sloupky (přední + zadní), celá výška
-  [-hd, hd].forEach(z => {
-    const m = box(P * 0.85, H, P * 0.85, MAT.posts);
-    m.position.set(0, H/2 + FH, z);
+  // 2 střední sloupky (přední + zadní)
+  [[-hd, H_front], [hd, H_back]].forEach(([z, h]) => {
+    const ph = h - FH;
+    const m = box(P * 0.85, ph, P * 0.85, MAT.posts);
+    m.position.set(0, FH + ph / 2, z);
     g.add(m);
   });
 
   // divZ = pozice přední stěny kabiny = -hd + CONFIG.TD
   const divZ = CONFIG.divZ;
-  // 2 dělicí sloupky terasa/kabina, od H1 výš
-  const cabinH = CONFIG.H - CONFIG.H1 + CONFIG.ROOF_PEAK;
+  // 2 dělicí sloupky terasa/kabina, od H1 výš (přední hrana střechy = H)
+  const cabinH = CONFIG.H - CONFIG.H1;
   [-hw, hw].forEach(x => {
     const m = box(P * 0.85, cabinH, P * 0.85, MAT.posts);
-    m.position.set(x, CONFIG.H1 + cabinH/2, divZ);
+    m.position.set(x, CONFIG.H1 + cabinH / 2, divZ);
     g.add(m);
   });
 
@@ -565,7 +802,7 @@ function createBeams() {
   for (let i = 0; i < 4; i++) {
     const z = -hd + CONFIG.D / 5 * (i + 0.5);
     const m = box(CONFIG.W, B, B, MAT.beam);
-    m.position.set(0, CONFIG.H1 - B/2, z);
+    m.position.set(0, CONFIG.H1 - B / 2, z);
     g.add(m);
   }
 
@@ -573,7 +810,7 @@ function createBeams() {
   for (let i = 0; i < 3; i++) {
     const z = -hd + CONFIG.D / 4 * (i + 0.5);
     const m = box(CONFIG.W, B, B, MAT.beam);
-    m.position.set(0, -B/2 + 0.01, z);
+    m.position.set(0, -B / 2 + 0.01, z);
     g.add(m);
   }
 
@@ -581,7 +818,7 @@ function createBeams() {
   const divZ = CONFIG.divZ;
   const cabinH = CONFIG.H - CONFIG.H1;
   const m = box(CONFIG.W, B, B, MAT.beam);
-  m.position.set(0, CONFIG.H1 + cabinH/2, divZ);
+  m.position.set(0, CONFIG.H1 + cabinH / 2, divZ);
   g.add(m);
 
   return g;
@@ -596,12 +833,12 @@ function createFloors() {
 
   // Podlaha 1. patra
   const f1 = box(CONFIG.W, FH1, CONFIG.D, MAT.floor);
-  f1.position.set(0, FH1/2, 0);
+  f1.position.set(0, FH1 / 2, 0);
   g.add(f1);
 
   // Podlaha 2. patra (celý půdorys)
   const f2 = box(CONFIG.W, FH2, CONFIG.D, MAT.floor);
-  f2.position.set(0, CONFIG.H1 + FH2/2, 0);
+  f2.position.set(0, CONFIG.H1 + FH2 / 2, 0);
   g.add(f2);
 
   return g;
@@ -622,21 +859,29 @@ function wallWithHole(totalW, totalH, holeX, holeY, holeW, holeH, mat, depth) {
   const holeBottom = holeY - holeH / 2;
   const segments = [
     // vlevo od otvoru
-    { x: (leftEdge + holeLeft) / 2,
+    {
+      x: (leftEdge + holeLeft) / 2,
       w: holeLeft - leftEdge,
-      y: totalH / 2, h: totalH },
+      y: totalH / 2, h: totalH
+    },
     // vpravo od otvoru
-    { x: (holeRight + rightEdge) / 2,
+    {
+      x: (holeRight + rightEdge) / 2,
       w: rightEdge - holeRight,
-      y: totalH / 2, h: totalH },
+      y: totalH / 2, h: totalH
+    },
     // nad otvorem
-    { x: holeX, w: holeW,
+    {
+      x: holeX, w: holeW,
       y: (holeTop + totalH) / 2,
-      h: totalH - holeTop },
+      h: totalH - holeTop
+    },
     // pod otvorem
-    { x: holeX, w: holeW,
+    {
+      x: holeX, w: holeW,
       y: holeBottom / 2,
-      h: holeBottom },
+      h: holeBottom
+    },
   ];
   segments.forEach(s => {
     if (s.w <= 0.001 || s.h <= 0.001) return;
@@ -657,37 +902,37 @@ function wallWithTwoHoles(totalW, totalH, holes, mat, depth) {
   const h1 = holes[0], h2 = holes[1];
 
   // Full height strips between/around holes
-  const leftEdge = -totalW/2;
-  const rightEdge = totalW/2;
+  const leftEdge = -totalW / 2;
+  const rightEdge = totalW / 2;
 
   // Columns: left of h1, between h1 and h2, right of h2
   const columns = [
-    { x0: leftEdge, x1: h1.x - h1.w/2 },
-    { x0: h1.x + h1.w/2, x1: h2.x - h2.w/2 },
-    { x0: h2.x + h2.w/2, x1: rightEdge },
+    { x0: leftEdge, x1: h1.x - h1.w / 2 },
+    { x0: h1.x + h1.w / 2, x1: h2.x - h2.w / 2 },
+    { x0: h2.x + h2.w / 2, x1: rightEdge },
   ];
   columns.forEach(col => {
     const cw = col.x1 - col.x0;
     if (cw <= 0.001) return;
     const m = box(cw, totalH, depth, mat);
-    m.position.set((col.x0 + col.x1)/2, totalH/2, 0);
+    m.position.set((col.x0 + col.x1) / 2, totalH / 2, 0);
     g.add(m);
   });
 
   // Rows above/below each hole (in their x range)
   holes.forEach(hole => {
     // above
-    const aboveH = totalH - (hole.y + hole.h/2);
+    const aboveH = totalH - (hole.y + hole.h / 2);
     if (aboveH > 0.001) {
       const m = box(hole.w, aboveH, depth, mat);
-      m.position.set(hole.x, hole.y + hole.h/2 + aboveH/2, 0);
+      m.position.set(hole.x, hole.y + hole.h / 2 + aboveH / 2, 0);
       g.add(m);
     }
     // below
-    const belowH = hole.y - hole.h/2;
+    const belowH = hole.y - hole.h / 2;
     if (belowH > 0.001) {
       const m = box(hole.w, belowH, depth, mat);
-      m.position.set(hole.x, belowH/2, 0);
+      m.position.set(hole.x, belowH / 2, 0);
       g.add(m);
     }
   });
@@ -703,65 +948,102 @@ function createWalls() {
 
   // === Zadní stěna (+Z) — plná, celá výška (1. + 2. patro) ===
   const backWall = box(CONFIG.W, CONFIG.H, T, MAT.walls);
-  backWall.position.set(0, CONFIG.H/2, hd + T/2);
+  backWall.position.set(0, CONFIG.H / 2, hd + T / 2);
   g.add(backWall);
 
-  // === Pravá stěna (+X) — plná 1. patro + 2. patro s oknem ===
+  // === Levá stěna (-X) — plná 1. patro + 2. patro s oknem ===
   // 1. patro: plná
-  const right1 = box(T, CONFIG.H1, CONFIG.D, MAT.walls);
-  right1.position.set(hw + T/2, CONFIG.H1/2, 0);
-  g.add(right1);
+  const left1 = box(T, CONFIG.H1, CONFIG.D, MAT.walls);
+  left1.position.set(-hw - T / 2, CONFIG.H1 / 2, 0);
+  g.add(left1);
 
-  // 2. patro pravá stěna s oknem (okno 50×40, cca uprostřed)
+  // 2. patro levá stěna s oknem — pouze kabina (ne terasa)
   const r2H = CONFIG.H - CONFIG.H1;
-  const win2 = { x: 0, y: r2H/2, w: CONFIG.SIDE_WIN_W, h: CONFIG.SIDE_WIN_H };
-  // holeX relative to center of wall depth (D)
-  const right2 = wallWithHole(CONFIG.D, r2H, win2.x, win2.y, win2.w, win2.h, MAT.walls, T);
-  right2.rotation.y = -Math.PI / 2;
-  right2.position.set(hw + T/2, CONFIG.H1, 0);
-  g.add(right2);
+  const win2 = { x: 0, y: r2H / 2, w: CONFIG.SIDE_WIN_W, h: CONFIG.SIDE_WIN_H };
+  const left2 = wallWithHole(CONFIG.CD, r2H, win2.x, win2.y, win2.w, win2.h, MAT.walls, T);
+  left2.rotation.y = Math.PI / 2;
+  left2.position.set(-hw - T / 2, CONFIG.H1, divZ + CONFIG.CD / 2);
+  g.add(left2);
 
-  // Window frame — right wall
-  addWindowFrame(g, hw + T, CONFIG.H1 + win2.y, 0, CONFIG.SIDE_WIN_W, CONFIG.SIDE_WIN_H, T, 'x', true);
+  // Window frame — left wall (centered on cabin, not terrace)
+  addWindowFrame(g, -hw - T, CONFIG.H1 + win2.y, divZ + CONFIG.CD / 2, CONFIG.SIDE_WIN_W, CONFIG.SIDE_WIN_H, T, 'x', true);
+
+  // === Pravá stěna (+X) — plná, pouze 2. patro, pouze kabina (ne terasa) ===
+  const r2H_right = CONFIG.H - CONFIG.H1;
+  const right2 = box(T, r2H_right, CONFIG.CD, MAT.walls);
+  right2.position.set(hw + T / 2, CONFIG.H1 + r2H_right / 2, divZ + CONFIG.CD / 2);
+  g.add(right2);
 
   // === Přední stěna kabiny (divZ) — 2. patro, dveře + okno ===
   const cabH = CONFIG.H - CONFIG.H1;
   // Dveře: vlevo, okno vpravo
-  const doorX = -CONFIG.W/2 + CONFIG.DOOR_W/2 + CONFIG.DOOR_OFFSET_X + 0.15;
-  const winX  =  CONFIG.W/2 - CONFIG.FRONT_WIN_W/2 - 0.15;
+  const doorX = -CONFIG.W / 2 + CONFIG.DOOR_W / 2 + CONFIG.DOOR_OFFSET_X + 0.15;
+  const winX = CONFIG.W / 2 - CONFIG.FRONT_WIN_W / 2 - 0.15;
   const holes = [
-    { x: doorX, y: CONFIG.DOOR_H/2, w: CONFIG.DOOR_W, h: CONFIG.DOOR_H },
-    { x: winX,  y: cabH/2,          w: CONFIG.FRONT_WIN_W, h: CONFIG.FRONT_WIN_H },
+    { x: doorX, y: CONFIG.DOOR_H / 2, w: CONFIG.DOOR_W, h: CONFIG.DOOR_H },
+    { x: winX, y: cabH / 2, w: CONFIG.FRONT_WIN_W, h: CONFIG.FRONT_WIN_H },
   ];
   const frontCabin = wallWithTwoHoles(CONFIG.W, cabH, holes, MAT.walls, T);
-  frontCabin.position.set(0, CONFIG.H1, divZ - T/2);
+  frontCabin.position.set(0, CONFIG.H1, divZ - T / 2);
   g.add(frontCabin);
 
   // Door frame
   addDoorFrame(g, doorX, CONFIG.H1, divZ - T, CONFIG.DOOR_W, CONFIG.DOOR_H, T);
   // Front cabin window frame
-  addWindowFrame(g, winX, CONFIG.H1 + cabH/2, divZ - T, CONFIG.FRONT_WIN_W, CONFIG.FRONT_WIN_H, T, 'z', false);
+  addWindowFrame(g, winX, CONFIG.H1 + cabH / 2, divZ - T, CONFIG.FRONT_WIN_W, CONFIG.FRONT_WIN_H, T, 'z', false);
+
+  // === Štítové zdi (gable walls) — trojúhelníky mezi stěnou a střechou ===
+  const H2 = CONFIG.H;
+  const gableLen = hd - divZ; // hloubka kabiny podél Z
+
+  [1, -1].forEach(side => {
+    const shape = new THREE.Shape();
+    if (side === 1) {
+      // Pravá (+X): rot π/2 → shape X maps to world -Z
+      shape.moveTo(0, 0);
+      shape.lineTo(gableLen, 0);
+      shape.lineTo(gableLen, CONFIG.ROOF_PEAK);
+    } else {
+      // Levá (-X): rot -π/2 → shape X maps to world +Z
+      shape.moveTo(0, 0);
+      shape.lineTo(gableLen, 0);
+      shape.lineTo(0, CONFIG.ROOF_PEAK);
+    }
+    shape.closePath();
+
+    const geom = new THREE.ExtrudeGeometry(shape, { depth: T, bevelEnabled: false });
+    const mesh = new THREE.Mesh(geom, MAT.walls.clone());
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.rotation.y = side * Math.PI / 2;
+    if (side === 1) {
+      mesh.position.set(hw + T / 2, H2, hd);
+    } else {
+      mesh.position.set(-hw - T / 2, H2, divZ);
+    }
+    g.add(mesh);
+  });
 
   return g;
 }
 
-function addWindowFrame(g, x, y, z, w, h, depth, axis, crosshair=false) {
+function addWindowFrame(g, x, y, z, w, h, depth, axis, crosshair = false) {
   const FT = 0.03;
   if (axis === 'x') {
     // Frame around window in right wall (rotated)
     const parts = [
       // top
-      { pw: w + FT*2, ph: FT, pd: depth*2, ox: 0, oy: h/2 + FT/2, oz: 0 },
+      { pw: w + FT * 2, ph: FT, pd: depth * 2, ox: 0, oy: h / 2 + FT / 2, oz: 0 },
       // bottom
-      { pw: w + FT*2, ph: FT, pd: depth*2, ox: 0, oy: -h/2 - FT/2, oz: 0 },
+      { pw: w + FT * 2, ph: FT, pd: depth * 2, ox: 0, oy: -h / 2 - FT / 2, oz: 0 },
       // left
-      { pw: FT, ph: h, pd: depth*2, ox: -w/2 - FT/2, oy: 0, oz: 0 },
+      { pw: FT, ph: h, pd: depth * 2, ox: -w / 2 - FT / 2, oy: 0, oz: 0 },
       // right
-      { pw: FT, ph: h, pd: depth*2, ox: w/2 + FT/2, oy: 0, oz: 0 },
+      { pw: FT, ph: h, pd: depth * 2, ox: w / 2 + FT / 2, oy: 0, oz: 0 },
     ];
     if (crosshair) {
-      parts.push({ pw: w, ph: FT, pd: depth*2, ox: 0, oy: 0, oz: 0 }); // horiz
-      parts.push({ pw: FT, ph: h, pd: depth*2, ox: 0, oy: 0, oz: 0 }); // vert
+      parts.push({ pw: w, ph: FT, pd: depth * 2, ox: 0, oy: 0, oz: 0 }); // horiz
+      parts.push({ pw: FT, ph: h, pd: depth * 2, ox: 0, oy: 0, oz: 0 }); // vert
     }
     parts.forEach(p => {
       const m = box(p.pd, p.ph, p.pw, MAT.frame, false, false);
@@ -770,16 +1052,16 @@ function addWindowFrame(g, x, y, z, w, h, depth, axis, crosshair=false) {
     });
     // Glass
     const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, h), MAT.glass);
-    glass.rotation.y = Math.PI/2;
+    glass.rotation.y = Math.PI / 2;
     glass.position.set(x, y, z);
     g.add(glass);
   } else {
     // z-facing window
     const parts = [
-      { pw: w + FT*2, ph: FT, pd: depth*2, ox: 0, oy: h/2 + FT/2, oz: 0 },
-      { pw: w + FT*2, ph: FT, pd: depth*2, ox: 0, oy: -h/2 - FT/2, oz: 0 },
-      { pw: FT, ph: h + FT*2, pd: depth*2, ox: -w/2 - FT/2, oy: 0, oz: 0 },
-      { pw: FT, ph: h + FT*2, pd: depth*2, ox: w/2 + FT/2, oy: 0, oz: 0 },
+      { pw: w + FT * 2, ph: FT, pd: depth * 2, ox: 0, oy: h / 2 + FT / 2, oz: 0 },
+      { pw: w + FT * 2, ph: FT, pd: depth * 2, ox: 0, oy: -h / 2 - FT / 2, oz: 0 },
+      { pw: FT, ph: h + FT * 2, pd: depth * 2, ox: -w / 2 - FT / 2, oy: 0, oz: 0 },
+      { pw: FT, ph: h + FT * 2, pd: depth * 2, ox: w / 2 + FT / 2, oy: 0, oz: 0 },
     ];
     parts.forEach(p => {
       const m = box(p.pw, p.ph, p.pd, MAT.frame, false, false);
@@ -796,13 +1078,13 @@ function addDoorFrame(g, x, y, z, w, h, depth) {
   const FT = 0.04;
   // sides
   [-1, 1].forEach(side => {
-    const m = box(FT, h, depth*2, MAT.frame, false, false);
-    m.position.set(x + side*(w/2 + FT/2), y + h/2, z);
+    const m = box(FT, h, depth * 2, MAT.frame, false, false);
+    m.position.set(x + side * (w / 2 + FT / 2), y + h / 2, z);
     g.add(m);
   });
   // lintel
-  const lintel = box(w + FT*2, FT, depth*2, MAT.frame, false, false);
-  lintel.position.set(x, y + h + FT/2, z);
+  const lintel = box(w + FT * 2, FT, depth * 2, MAT.frame, false, false);
+  lintel.position.set(x, y + h + FT / 2, z);
   g.add(lintel);
 }
 
@@ -827,17 +1109,17 @@ function createRoof() {
   const roofCenterY = (H2 + HP) / 2;
   const roofCenterZ = (divZ + hd) / 2;
 
-  const roofMesh = box(CONFIG.W + OH*2, T, roofLen, MAT.roof);
-  roofMesh.rotation.x = -roofAngle;
-  roofMesh.position.set(0, roofCenterY + T/2, roofCenterZ);
+  const roofMesh = box(CONFIG.W + OH * 2, T, roofLen, MAT.roof);
+  roofMesh.rotation.x = roofAngle;
+  roofMesh.position.set(0, roofCenterY + T / 2, roofCenterZ);
   g.add(roofMesh);
 
   // Barge boards (fascie) — přední a zadní hrana
   const bargeT = 0.04;
   [-1, 1].forEach(side => {
-    const m = box(CONFIG.W + OH*2 + bargeT*2, bargeT, bargeT, MAT.roofEdge, false, false);
+    const m = box(CONFIG.W + OH * 2 + bargeT * 2, bargeT, bargeT, MAT.roofEdge, false, false);
     m.position.set(0,
-      side === -1 ? H2 - bargeT/2 : HP - bargeT/2,
+      side === -1 ? H2 - bargeT / 2 : HP - bargeT / 2,
       side === -1 ? divZ - OH : hd + OH
     );
     g.add(m);
@@ -846,8 +1128,8 @@ function createRoof() {
   // Vergeboard — levý a pravý okraj
   [-1, 1].forEach(side => {
     const m = box(bargeT, T * 1.5, roofLen, MAT.roofEdge, false, false);
-    m.rotation.x = -roofAngle;
-    m.position.set(side * (CONFIG.W/2 + OH + bargeT/2), roofCenterY, roofCenterZ);
+    m.rotation.x = roofAngle;
+    m.position.set(side * (CONFIG.W / 2 + OH + bargeT / 2), roofCenterY, roofCenterZ);
     g.add(m);
   });
 
@@ -867,16 +1149,16 @@ function createRailing() {
 
   function addPost(x, z, height) {
     const m = box(RT, height, RT, MAT.railing);
-    m.position.set(x, baseY + height/2, z);
+    m.position.set(x, baseY + height / 2, z);
     g.add(m);
   }
   function addRail(x1, z1, x2, z2, y) {
-    const dx = x2-x1, dz = z2-z1;
-    const len = Math.sqrt(dx*dx + dz*dz);
-    const angle = Math.atan2(dx, dz);
+    const dx = x2 - x1, dz = z2 - z1;
+    const len = Math.sqrt(dx * dx + dz * dz);
+    const angle = Math.atan2(dz, dx);
     const m = box(len, RT, RT, MAT.railing, false, false);
     m.rotation.y = angle;
-    m.position.set((x1+x2)/2, y, (z1+z2)/2);
+    m.position.set((x1 + x2) / 2, y, (z1 + z2) / 2);
     g.add(m);
   }
 
@@ -889,9 +1171,9 @@ function createRailing() {
     addPost(x, zFront, RH);
   }
   // Top rail
-  addRail(-hw, zFront, hw, zFront, baseY + RH - RT/2);
+  addRail(-hw, zFront, hw, zFront, baseY + RH - RT / 2);
   // Mid rail
-  addRail(-hw, zFront, hw, zFront, baseY + RH/2);
+  addRail(-hw, zFront, hw, zFront, baseY + RH / 2);
 
   // Levé zábradlí (-X strana terasy)
   const xLeft = -hw;
@@ -900,8 +1182,8 @@ function createRailing() {
     const z = zFront + CONFIG.TD / numLeft * i;
     addPost(xLeft, z, RH);
   }
-  addRail(xLeft, zFront, xLeft, divZ, baseY + RH - RT/2);
-  addRail(xLeft, zFront, xLeft, divZ, baseY + RH/2);
+  addRail(xLeft, zFront, xLeft, divZ, baseY + RH - RT / 2);
+  addRail(xLeft, zFront, xLeft, divZ, baseY + RH / 2);
 
   return g;
 }
@@ -933,14 +1215,14 @@ function createSlide() {
   slideGroup.rotation.x = -slideAngle;
 
   // Pivot at top of slide: right corner from camera view (world -X, camera at +6)
-  slideGroup.position.set(-hw + CONFIG.SLIDE_W / 2, CONFIG.H1, -hd);
+  slideGroup.position.set(hw - CONFIG.SLIDE_W / 2, CONFIG.H1, -hd);
 
   g.add(slideGroup);
   return g;
 }
 
 // ============================================================
-// Ladder — žebřík (levá strana -X, zvenku, nakloněn 75° od vodorovné)
+// Ladder — žebřík (pravá strana +X, zvenku, nakloněn 75° od vodorovné)
 // ============================================================
 function createLadder() {
   const g = new THREE.Group(); g.name = 'ladder';
@@ -949,17 +1231,14 @@ function createLadder() {
   const LW = CONFIG.LADDER_W;
   const LH = CONFIG.LADDER_H;
 
-  // 75° od vodorovné = 15° od svislé
-  // Žebřík opřen o LEVOU stěnu (-X) zvenku:
-  //   - vršek: x = -hw (u stěny), y = H1 (podlaha 2. patra)
-  //   - spodek: x = -hw - LH*sin(15°), y = 0 (na zemi)
-  // Rotace kolem Z: -15° nakloní vršek směrem k +X (ke stěně)
-  const tilt = 15 * Math.PI / 180; // 15° od svislé
-  const projX = LH * Math.sin(tilt); // horizontální přesah = 0.479m
-  const projY = LH * Math.cos(tilt); // výškový dosah = 1.787m
+  // Žebřík opřen o PRAVOU stěnu (+X) zvenku:
+  //   - vršek: x = +hw (u stěny), y = H1 (podlaha 2. patra)
+  //   - spodek: 1m od stěny na zemi
+  const projX = 1.0; // spodek žebříku 1m od stěny
+  const tilt = Math.asin(projX / LH); // úhel od svislice
 
-  // Spodek žebříku na zemi, vně levé stěny
-  const bottomX = -hw - projX;
+  // Spodek žebříku na zemi, vně pravé stěny (+X)
+  const bottomX = hw + projX;
   const bottomY = 0;
   // Pozice podél Z: přibližně uprostřed terasy
   const ladderZ = -hd + CONFIG.TD * 0.5;
@@ -977,14 +1256,14 @@ function createLadder() {
   // Příčle
   for (let i = 0; i < CONFIG.LADDER_RUNGS; i++) {
     const t = (i + 0.5) / CONFIG.LADDER_RUNGS;
-    const rung = box(LW, 0.04, 0.04, MAT.ladder);
+    const rung = box(0.04, 0.04, LW, MAT.ladder);
     rung.position.set(0, LH * t, 0);
     ladderGroup.add(rung);
   }
 
-  // Rotace: -tilt kolem Z nakloní +Y vršek ke +X (žebřík se opírá o stěnu zprava)
-  ladderGroup.rotation.z = -tilt;
-  // Posun: spodek na správné místo vně levé stěny
+  // Rotace: +tilt kolem Z nakloní +Y vršek ke -X (žebřík se opírá o pravou stěnu +X zvenku)
+  ladderGroup.rotation.z = tilt;
+  // Posun: spodek na správné místo vně pravé stěny (+X)
   ladderGroup.position.set(bottomX, bottomY, ladderZ);
 
   g.add(ladderGroup);
@@ -999,7 +1278,7 @@ function makeLabel(text, color = '#d4c9a8', fontSize = 14) {
   c.width = 256; c.height = 64;
   const ctx = c.getContext('2d');
   ctx.fillStyle = 'rgba(26,31,22,0.75)';
-  ctx.roundRect ? ctx.roundRect(4, 4, c.width-8, c.height-8, 6) : ctx.fillRect(4,4,c.width-8,c.height-8);
+  ctx.roundRect ? ctx.roundRect(4, 4, c.width - 8, c.height - 8, 6) : ctx.fillRect(4, 4, c.width - 8, c.height - 8);
   ctx.fill();
   ctx.strokeStyle = '#3a4030';
   ctx.lineWidth = 1;
@@ -1008,7 +1287,7 @@ function makeLabel(text, color = '#d4c9a8', fontSize = 14) {
   ctx.font = `${fontSize}px Segoe UI, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(text, c.width/2, c.height/2);
+  ctx.fillText(text, c.width / 2, c.height / 2);
   const tex = new THREE.CanvasTexture(c);
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
   const sprite = new THREE.Sprite(mat);
@@ -1021,11 +1300,11 @@ function createLabels() {
   const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
 
   const items = [
-    { text: 'KABINA  310×172 cm', x: 0, y: CONFIG.H1 + 0.7, z: hd/2 + 0.2 },
-    { text: 'TERASA  310×70 cm', x: 0, y: CONFIG.H1 + 0.3, z: -hd + CONFIG.TD/2 },
-    { text: 'PŘÍZEMÍ  150 cm', x: 0, y: 0.7, z: -hd/2 },
-    { text: 'Klouzačka  260 cm', x: hw + 0.4, y: CONFIG.H1/2, z: -hd - 0.4, color: COLORS.slide },
-    { text: 'Žebřík  6 příček', x: -hw - 0.8, y: CONFIG.H1/2, z: 0, color: COLORS.ladder },
+    { text: 'KABINA  310\u00d7172 cm', x: 0, y: CONFIG.H1 + 0.7, z: hd / 2 + 0.2 },
+    { text: 'TERASA  310\u00d770 cm', x: 0, y: CONFIG.H1 + 0.3, z: -hd + CONFIG.TD / 2 },
+    { text: 'P\u0158\u00cdZEM\u00cd  150 cm', x: 0, y: 0.7, z: -hd / 2 },
+    { text: 'Klouz\u00e1\u010dka  260 cm', x: hw + 0.4, y: CONFIG.H1 / 2, z: -hd - 0.4, color: COLORS.slide },
+    { text: '\u017deb\u0159\u00edk  6 p\u0159\u00ed\u010dek', x: -hw - 0.8, y: CONFIG.H1 / 2, z: 0, color: COLORS.ladder },
   ];
   items.forEach(it => {
     const s = makeLabel(it.text, it.color || '#d4c9a8');
@@ -1036,77 +1315,473 @@ function createLabels() {
 }
 
 // ============================================================
-// 2D Kóty a popisky — canvas overlay s world-to-screen projekcí
+// 3D Dimensions — rozmerove cary ve 3D scene (toggle)
+// ============================================================
+function makeDimLabel(text) {
+  const c = document.createElement('canvas');
+  c.width = 192; c.height = 48;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = 'rgba(20,25,15,0.85)';
+  if (ctx.roundRect) ctx.roundRect(2, 2, c.width - 4, c.height - 4, 4);
+  else ctx.fillRect(2, 2, c.width - 4, c.height - 4);
+  ctx.fill();
+  ctx.strokeStyle = '#5a6a4a';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = '#e8dcc0';
+  ctx.font = 'bold 16px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, c.width / 2, c.height / 2);
+  const tex = new THREE.CanvasTexture(c);
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(0.8, 0.2, 1);
+  return sprite;
+}
+
+function makeDimLine(p1, p2, offset, label) {
+  const group = new THREE.Group();
+
+  const o1 = p1.clone().add(offset);
+  const o2 = p2.clone().add(offset);
+
+  // Extension lines
+  const extOffset = offset.clone().normalize().multiplyScalar(0.05);
+  const extMat = new THREE.LineBasicMaterial({ color: 0x8a9a72, transparent: true, opacity: 0.5 });
+  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1.clone().add(extOffset), o1]), extMat));
+  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p2.clone().add(extOffset), o2]), extMat));
+
+  // Main dimension line
+  const mainMat = new THREE.LineBasicMaterial({ color: 0x8a9a72 });
+  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([o1, o2]), mainMat));
+
+  // Ticks at ends
+  const tickLen = 0.06;
+  const perp = offset.clone().normalize().multiplyScalar(tickLen);
+  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([o1.clone().add(perp), o1.clone().sub(perp)]), mainMat));
+  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([o2.clone().add(perp), o2.clone().sub(perp)]), mainMat));
+
+  // Label at midpoint
+  const lbl = makeDimLabel(label);
+  lbl.position.copy(o1.clone().add(o2).multiplyScalar(0.5));
+  group.add(lbl);
+
+  return group;
+}
+
+function createDimensions() {
+  const g = new THREE.Group();
+  g.name = 'dimensions';
+  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+
+  // Celkova sirka (dole, predni strana)
+  g.add(makeDimLine(
+    new THREE.Vector3(-hw, 0, -hd),
+    new THREE.Vector3(hw, 0, -hd),
+    new THREE.Vector3(0, 0, -0.4),
+    '310 cm'
+  ));
+
+  // Celkova hloubka (dole, prava strana)
+  g.add(makeDimLine(
+    new THREE.Vector3(hw, 0, -hd),
+    new THREE.Vector3(hw, 0, hd),
+    new THREE.Vector3(0.4, 0, 0),
+    '242 cm'
+  ));
+
+  // Vyska 1. patra (posunuto dal, aby neprocházelo stitem)
+  g.add(makeDimLine(
+    new THREE.Vector3(-hw, 0, -hd),
+    new THREE.Vector3(-hw, CONFIG.H1, -hd),
+    new THREE.Vector3(-0.5, 0, -0.5),
+    '150 cm'
+  ));
+
+  // Celkova vyska po okap (posunuto dal)
+  g.add(makeDimLine(
+    new THREE.Vector3(-hw, 0, -hd),
+    new THREE.Vector3(-hw, CONFIG.H, -hd),
+    new THREE.Vector3(-1.0, 0, -1.0),
+    '300 cm'
+  ));
+
+  // Prevyseni strechy
+  g.add(makeDimLine(
+    new THREE.Vector3(-hw, CONFIG.H, hd),
+    new THREE.Vector3(-hw, CONFIG.H + CONFIG.ROOF_PEAK, hd),
+    new THREE.Vector3(-0.9, 0, 0.3),
+    '+45 cm'
+  ));
+
+  // Terasa vs kabina (prava strana, uroven 2. patra)
+  const divZ = -hd + CONFIG.TD;
+  g.add(makeDimLine(
+    new THREE.Vector3(hw, CONFIG.H1, -hd),
+    new THREE.Vector3(hw, CONFIG.H1, divZ),
+    new THREE.Vector3(0.5, 0, 0),
+    '70 cm'
+  ));
+  g.add(makeDimLine(
+    new THREE.Vector3(hw, CONFIG.H1, divZ),
+    new THREE.Vector3(hw, CONFIG.H1, hd),
+    new THREE.Vector3(0.5, 0, 0),
+    '172 cm'
+  ));
+
+  // Vyska dveri
+  g.add(makeDimLine(
+    new THREE.Vector3(-CONFIG.DOOR_W / 2 + CONFIG.DOOR_OFFSET_X, CONFIG.H1, divZ),
+    new THREE.Vector3(-CONFIG.DOOR_W / 2 + CONFIG.DOOR_OFFSET_X, CONFIG.H1 + CONFIG.DOOR_H, divZ),
+    new THREE.Vector3(0, 0, -0.25),
+    '110 cm'
+  ));
+
+  // Vyska zabradli
+  g.add(makeDimLine(
+    new THREE.Vector3(-hw, CONFIG.H1, -hd),
+    new THREE.Vector3(-hw, CONFIG.H1 + CONFIG.RAIL_H, -hd),
+    new THREE.Vector3(0, 0, -0.6),
+    '90 cm'
+  ));
+
+  g.visible = false;
+  return g;
+}
+
+// ============================================================
+// 2D Koty — canvas overlay se sipkami a extension lines
 // ============================================================
 function drawDimensions(view) {
   const cv = document.getElementById('dim-canvas');
   cv.width = window.innerWidth; cv.height = window.innerHeight;
   const ctx = cv.getContext('2d');
   ctx.clearRect(0, 0, cv.width, cv.height);
-  ctx.strokeStyle = '#8a9a72'; ctx.fillStyle = '#d4c9a8';
-  ctx.lineWidth = 1; ctx.font = '12px Segoe UI, sans-serif';
 
-  // Převod world souřadnic na screen
+  const DIM_COLOR = '#8a9a72';
+  const DIM_COLOR_LIGHT = 'rgba(138,154,114,0.4)';
+  const TEXT_COLOR = '#d4c9a8';
+  const TEXT_BG = 'rgba(26,31,22,0.85)';
+  const LABEL_COLOR = 'rgba(212,201,168,0.6)';
+  const ARROW_SIZE = 6;
+  const EXT_OVERSHOOT = 4;
+  const ROW1 = 30;
+  const ROW2 = 60;
+
+  // World-to-screen
   function ws(wx, wy, wz) {
-    const v = new THREE.Vector3(wx, wy, wz ?? 0);
+    const v = new THREE.Vector3(wx, wy, wz != null ? wz : 0);
     v.project(activeCamera);
     return { x: (v.x + 1) / 2 * cv.width, y: (1 - v.y) / 2 * cv.height };
   }
 
-  // Horizontální kóta
-  function dimH(wx1, wx2, wy, wz, label) {
-    const a = ws(wx1, wy, wz), b = ws(wx2, wy, wz);
-    ctx.setLineDash([4, 3]);
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-    ctx.setLineDash([]);
-    const tw = ctx.measureText(label).width;
-    ctx.fillText(label, (a.x + b.x) / 2 - tw / 2, a.y - 6);
-  }
-
-  // Vertikální kóta
-  function dimV(wx, wy1, wy2, wz, label) {
-    const a = ws(wx, wy1, wz), b = ws(wx, wy2, wz);
-    ctx.setLineDash([4, 3]);
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-    ctx.setLineDash([]);
+  // Sipka (plny trojuhelnik)
+  function drawArrow(x, y, angle) {
     ctx.save();
-    ctx.translate(a.x + 18, (a.y + b.y) / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillText(label, -ctx.measureText(label).width / 2, 0);
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-ARROW_SIZE * 2, -ARROW_SIZE);
+    ctx.lineTo(-ARROW_SIZE * 2, ARROW_SIZE);
+    ctx.closePath();
+    ctx.fillStyle = DIM_COLOR;
+    ctx.fill();
     ctx.restore();
   }
 
-  // Popisek
-  function lbl(wx, wy, wz, text) {
-    const p = ws(wx, wy, wz);
-    ctx.fillText(text, p.x, p.y);
+  // Text s pozadim
+  function drawDimText(text, x, y, vertical) {
+    ctx.save();
+    ctx.font = 'bold 12px Segoe UI, sans-serif';
+    var tw = ctx.measureText(text).width;
+    var th = 14;
+    var px = 6, py = 3;
+
+    if (vertical) {
+      ctx.translate(x, y);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillStyle = TEXT_BG;
+      ctx.fillRect(-tw / 2 - px, -th / 2 - py, tw + px * 2, th + py * 2);
+      ctx.fillStyle = TEXT_COLOR;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 0, 0);
+    } else {
+      ctx.fillStyle = TEXT_BG;
+      ctx.fillRect(x - tw / 2 - px, y - th / 2 - py, tw + px * 2, th + py * 2);
+      ctx.fillStyle = TEXT_COLOR;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x, y);
+    }
+    ctx.restore();
   }
 
-  if (view === 'front') {
-    dimH(-CONFIG.W/2, CONFIG.W/2, -0.35, -CONFIG.D/2, '310 cm šířka');
-    dimV(-CONFIG.W/2 - 0.4, 0, CONFIG.H1, 0, '150 cm');
-    dimV(-CONFIG.W/2 - 0.4, CONFIG.H1, CONFIG.H, 0, '150 cm');
-    lbl(0, 0.75, -CONFIG.D/2, 'PŘÍZEMÍ (otevřeno)');
-    lbl(0, 2.25, -CONFIG.D/2, '2. PATRO');
-    lbl(CONFIG.divZ, CONFIG.H1 + 0.5, -CONFIG.D/2 + 0.1, 'TERASA');
-  } else if (view === 'side') {
-    dimV(-CONFIG.D/2 - 0.4, 0, CONFIG.H1, null, '150');
-    dimV(-CONFIG.D/2 - 0.4, CONFIG.H1, CONFIG.H, null, '150');
-    dimH(-CONFIG.D/2, CONFIG.divZ, -0.35, null, '70 terasa');
-    dimH(CONFIG.divZ, CONFIG.D/2, -0.35, null, '172 kabina');
-    lbl(0, CONFIG.H + 0.2, null, '300 cm (+45 hřeben)');
-  } else if (view === 'floor1') {
-    dimH(-CONFIG.W/2, CONFIG.W/2, CONFIG.D/2 + 0.35, 0, '310 cm šířka');
-    dimV(CONFIG.W/2 + 0.35, -CONFIG.D/2, CONFIG.D/2, 0, '242 cm hloubka');
-    lbl(0, 0.2, 0, 'PŘÍZEMÍ — otevřeno vpředu (-Z) a vlevo (-X)');
-  } else if (view === 'floor2') {
-    dimH(-CONFIG.W/2, CONFIG.W/2, CONFIG.D/2 + 0.35, 0, '310 cm šířka');
-    lbl(0, CONFIG.H1 + 0.2, -CONFIG.D/2 + CONFIG.TD/2, 'TERASA (70 cm)');
-    lbl(0, CONFIG.H1 + 0.2, CONFIG.divZ + CONFIG.CD/2, 'KABINA (172 cm)');
-  } else if (view === 'section') {
-    ctx.fillText('ŘEZ — pohled zprava (X=0)', 20, 30);
-    ctx.fillText(`Podlaha 2. patra: ${CONFIG.H1 * 100 | 0} cm`, 20, 50);
-    ctx.fillText(`Výška hřebene: ${(CONFIG.H + CONFIG.ROOF_PEAK) * 100 | 0} cm`, 20, 70);
+  // Popisek (uvnitr plochy, jemnejsi)
+  function drawAreaLabel(text, wx, wy, wz) {
+    var p = ws(wx, wy, wz);
+    ctx.save();
+    ctx.font = '13px Segoe UI, sans-serif';
+    ctx.fillStyle = LABEL_COLOR;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, p.x, p.y);
+    ctx.restore();
+  }
+
+  // Horizontalni kota se sipkami a extension lines
+  // a, b = screen body (zacatek, konec), baseY = Y zakladny odkud vedou ext lines
+  // dimY = Y kde bude kotova cara
+  function dimLineH(a, b, baseAY, baseBY, dimY) {
+    var leftX = Math.min(a.x, b.x);
+    var rightX = Math.max(a.x, b.x);
+    var extDir = dimY > Math.max(baseAY, baseBY) ? 1 : -1;
+
+    ctx.strokeStyle = DIM_COLOR_LIGHT;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([]);
+
+    // Extension lines
+    ctx.beginPath(); ctx.moveTo(a.x, baseAY); ctx.lineTo(a.x, dimY + extDir * EXT_OVERSHOOT); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(b.x, baseBY); ctx.lineTo(b.x, dimY + extDir * EXT_OVERSHOOT); ctx.stroke();
+
+    // Dimension line
+    ctx.strokeStyle = DIM_COLOR;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(a.x, dimY); ctx.lineTo(b.x, dimY); ctx.stroke();
+
+    // Sipky
+    drawArrow(leftX, dimY, 0);
+    drawArrow(rightX, dimY, Math.PI);
+  }
+
+  // Vertikalni kota se sipkami a extension lines
+  // a, b = screen body (zacatek, konec), baseX = X zakladny odkud vedou ext lines
+  // dimX = X kde bude kotova cara
+  function dimLineV(a, b, baseAX, baseBX, dimX) {
+    var topY = Math.min(a.y, b.y);
+    var botY = Math.max(a.y, b.y);
+    var extDir = dimX > Math.max(baseAX, baseBX) ? 1 : -1;
+
+    ctx.strokeStyle = DIM_COLOR_LIGHT;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([]);
+
+    // Extension lines
+    ctx.beginPath(); ctx.moveTo(baseAX, a.y); ctx.lineTo(dimX + extDir * EXT_OVERSHOOT, a.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(baseBX, b.y); ctx.lineTo(dimX + extDir * EXT_OVERSHOOT, b.y); ctx.stroke();
+
+    // Dimension line
+    ctx.strokeStyle = DIM_COLOR;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(dimX, a.y); ctx.lineTo(dimX, b.y); ctx.stroke();
+
+    // Sipky
+    drawArrow(dimX, topY, -Math.PI / 2);
+    drawArrow(dimX, botY, Math.PI / 2);
+  }
+
+  var hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+  var divZ = CONFIG.divZ;
+
+  // ---- PUDORYS 1. PATRO ----
+  if (view === 'floor1') {
+    var tl = ws(-hw, 0, hd);   // top-left (zadni-levy)
+    var tr = ws(hw, 0, hd);    // top-right (zadni-pravy)
+    var bl = ws(-hw, 0, -hd);  // bottom-left (predni-levy)
+    var br = ws(hw, 0, -hd);   // bottom-right (predni-pravy)
+
+    // Sirka 310 cm (dole)
+    dimLineH(bl, br, bl.y, br.y, bl.y + ROW2);
+    drawDimText('310 cm', (bl.x + br.x) / 2, bl.y + ROW2, false);
+
+    // Hloubka 242 cm (vpravo)
+    dimLineV(br, tr, br.x, tr.x, br.x + ROW2);
+    drawDimText('242 cm', br.x + ROW2, (br.y + tr.y) / 2, true);
+
+    // Popisek
+    drawAreaLabel('PRIZEMI — otevreno vpredu a vlevo', (tl.x + br.x) / 2, (tl.y + bl.y) / 2, null);
+  }
+
+  // ---- PUDORYS 2. PATRO ----
+  else if (view === 'floor2') {
+    var tl = ws(-hw, 0, hd);
+    var tr = ws(hw, 0, hd);
+    var bl = ws(-hw, 0, -hd);
+    var br = ws(hw, 0, -hd);
+    var divR = ws(hw, 0, divZ);   // delici cara vpravo
+    var divL = ws(-hw, 0, divZ);  // delici cara vlevo
+
+    // Sirka 310 cm (dole)
+    dimLineH(bl, br, bl.y, br.y, bl.y + ROW2);
+    drawDimText('310 cm', (bl.x + br.x) / 2, bl.y + ROW2, false);
+
+    // Hloubka celkova 242 cm (vpravo, rada 2)
+    dimLineV(br, tr, br.x, tr.x, br.x + ROW2);
+    drawDimText('242 cm', br.x + ROW2, (br.y + tr.y) / 2, true);
+
+    // Terasa 70 cm (vpravo, rada 1)
+    dimLineV(br, divR, br.x, divR.x, br.x + ROW1);
+    drawDimText('70 cm', br.x + ROW1, (br.y + divR.y) / 2, true);
+
+    // Kabina 172 cm (vpravo, rada 1)
+    dimLineV(divR, tr, divR.x, tr.x, divR.x + ROW1);
+    drawDimText('172 cm', divR.x + ROW1, (divR.y + tr.y) / 2, true);
+
+    // Popisky uvnitr
+    drawAreaLabel('TERASA', (bl.x + br.x) / 2, (bl.y + divR.y) / 2, null);
+    drawAreaLabel('KABINA', (tl.x + tr.x) / 2, (divL.y + tl.y) / 2, null);
+  }
+
+  // ---- NARYS ZEPREDU ----
+  else if (view === 'front') {
+    var bl = ws(-hw, 0, -hd);
+    var br = ws(hw, 0, -hd);
+    var tlMid = ws(-hw, CONFIG.H1, -hd);
+    var tlTop = ws(-hw, CONFIG.H, -hd);
+    var tlPeak = ws(-hw, CONFIG.H + CONFIG.ROOF_PEAK, -hd);
+
+    // Sirka 310 cm (dole)
+    dimLineH(bl, br, bl.y, br.y, bl.y + ROW1);
+    drawDimText('310 cm', (bl.x + br.x) / 2, bl.y + ROW1, false);
+
+    // 1. patro 150 cm (vlevo, rada 1)
+    dimLineV(bl, tlMid, bl.x, tlMid.x, bl.x - ROW1);
+    drawDimText('150 cm', bl.x - ROW1, (bl.y + tlMid.y) / 2, true);
+
+    // 2. patro 150 cm (vlevo, rada 1)
+    dimLineV(tlMid, tlTop, tlMid.x, tlTop.x, tlMid.x - ROW1);
+    drawDimText('150 cm', tlMid.x - ROW1, (tlMid.y + tlTop.y) / 2, true);
+
+    // Celkova 300 cm (vlevo, rada 2)
+    dimLineV(bl, tlTop, bl.x, tlTop.x, bl.x - ROW2);
+    drawDimText('300 cm', bl.x - ROW2, (bl.y + tlTop.y) / 2, true);
+
+    // Hreben +45 cm (vlevo, rada 2)
+    dimLineV(tlTop, tlPeak, tlTop.x, tlPeak.x, tlTop.x - ROW2);
+    drawDimText('+45 cm', tlTop.x - ROW2, (tlTop.y + tlPeak.y) / 2, true);
+
+    // Popisky
+    drawAreaLabel('PRIZEMI (otevreno)', (bl.x + br.x) / 2, (bl.y + tlMid.y) / 2, null);
+    drawAreaLabel('2. PATRO', (bl.x + br.x) / 2, (tlMid.y + tlTop.y) / 2, null);
+  }
+
+  // ---- NARYS Z BOKU ----
+  else if (view === 'side') {
+    // Kamera na +X, screen X = -Z (predni vlevo, zadni vpravo? nebo naopak)
+    // Musime pouzit ws a zjistit skutecne screen pozice
+    var frontBot = ws(hw, 0, -hd);
+    var backBot = ws(hw, 0, hd);
+    var frontMid = ws(hw, CONFIG.H1, -hd);
+    var backMid = ws(hw, CONFIG.H1, hd);
+    var frontTop = ws(hw, CONFIG.H, -hd);
+    var backTop = ws(hw, CONFIG.H, hd);
+    var backPeak = ws(hw, CONFIG.H + CONFIG.ROOF_PEAK, hd);
+    var divBot = ws(hw, 0, divZ);
+    var divMid = ws(hw, CONFIG.H1, divZ);
+
+    // Zjistime ktery je screen vlevo
+    var leftBot = frontBot.x < backBot.x ? frontBot : backBot;
+    var rightBot = frontBot.x < backBot.x ? backBot : frontBot;
+    var leftMid = frontBot.x < backBot.x ? frontMid : backMid;
+    var rightMid = frontBot.x < backBot.x ? backMid : frontMid;
+    var leftTop = frontBot.x < backBot.x ? frontTop : backTop;
+
+    // Terasa 70 cm (dole, rada 1)
+    var baseY = Math.max(frontBot.y, divBot.y, backBot.y);
+    var dimY1 = baseY + ROW1;
+
+    dimLineH(frontBot, divBot, frontBot.y, divBot.y, dimY1);
+    drawDimText('70 cm', (frontBot.x + divBot.x) / 2, dimY1, false);
+
+    // Kabina 172 cm (dole, rada 1)
+    dimLineH(divBot, backBot, divBot.y, backBot.y, dimY1);
+    drawDimText('172 cm', (divBot.x + backBot.x) / 2, dimY1, false);
+
+    // Celkova hloubka 242 cm (dole, rada 2)
+    var dimY2 = baseY + ROW2;
+    // Extension lines prodlouzit z rady 1
+    dimLineH(frontBot, backBot, frontBot.y, backBot.y, dimY2);
+    drawDimText('242 cm', (frontBot.x + backBot.x) / 2, dimY2, false);
+
+    // Vysky (vlevo)
+    // 1. patro 150 cm
+    dimLineV(leftBot, leftMid, leftBot.x, leftMid.x, leftBot.x - ROW1);
+    drawDimText('150 cm', leftBot.x - ROW1, (leftBot.y + leftMid.y) / 2, true);
+
+    // 2. patro 150 cm
+    dimLineV(leftMid, leftTop, leftMid.x, leftTop.x, leftMid.x - ROW1);
+    drawDimText('150 cm', leftMid.x - ROW1, (leftMid.y + leftTop.y) / 2, true);
+
+    // Celkova 300 cm
+    dimLineV(leftBot, leftTop, leftBot.x, leftTop.x, leftBot.x - ROW2);
+    drawDimText('300 cm', leftBot.x - ROW2, (leftBot.y + leftTop.y) / 2, true);
+
+    // Hreben +45 cm
+    var leftPeak = frontBot.x < backBot.x ? ws(hw, CONFIG.H + CONFIG.ROOF_PEAK, -hd) : backPeak;
+    // Hreben je vzadu, takze pouzijeme backTop a backPeak
+    dimLineV(backTop, backPeak, backTop.x, backPeak.x, Math.max(backTop.x, backPeak.x) + ROW1);
+    drawDimText('+45 cm', Math.max(backTop.x, backPeak.x) + ROW1, (backTop.y + backPeak.y) / 2, true);
+
+    // Popisky
+    drawAreaLabel('PRIZEMI', (leftBot.x + rightBot.x) / 2, (leftBot.y + leftMid.y) / 2, null);
+    drawAreaLabel('2. PATRO', (leftBot.x + rightBot.x) / 2, (leftMid.y + leftTop.y) / 2, null);
+  }
+
+  // ---- REZ ----
+  else if (view === 'section') {
+    var frontBot = ws(0, 0, -hd);
+    var backBot = ws(0, 0, hd);
+    var frontMid = ws(0, CONFIG.H1, -hd);
+    var backMid = ws(0, CONFIG.H1, hd);
+    var frontTop = ws(0, CONFIG.H, -hd);
+    var backTop = ws(0, CONFIG.H, hd);
+    var backPeak = ws(0, CONFIG.H + CONFIG.ROOF_PEAK, hd);
+    var divBot = ws(0, 0, divZ);
+
+    var leftBot = frontBot.x < backBot.x ? frontBot : backBot;
+    var rightBot = frontBot.x < backBot.x ? backBot : frontBot;
+    var leftMid = frontBot.x < backBot.x ? frontMid : backMid;
+    var leftTop = frontBot.x < backBot.x ? frontTop : backTop;
+
+    // Terasa + kabina (dole, rada 1)
+    var baseY = Math.max(frontBot.y, divBot.y, backBot.y);
+    var dimY1 = baseY + ROW1;
+
+    dimLineH(frontBot, divBot, frontBot.y, divBot.y, dimY1);
+    drawDimText('70 cm', (frontBot.x + divBot.x) / 2, dimY1, false);
+
+    dimLineH(divBot, backBot, divBot.y, backBot.y, dimY1);
+    drawDimText('172 cm', (divBot.x + backBot.x) / 2, dimY1, false);
+
+    // Celkova hloubka (dole, rada 2)
+    var dimY2 = baseY + ROW2;
+    dimLineH(frontBot, backBot, frontBot.y, backBot.y, dimY2);
+    drawDimText('242 cm', (frontBot.x + backBot.x) / 2, dimY2, false);
+
+    // Vysky (vlevo)
+    dimLineV(leftBot, leftMid, leftBot.x, leftMid.x, leftBot.x - ROW1);
+    drawDimText('150 cm', leftBot.x - ROW1, (leftBot.y + leftMid.y) / 2, true);
+
+    dimLineV(leftMid, leftTop, leftMid.x, leftTop.x, leftMid.x - ROW1);
+    drawDimText('150 cm', leftMid.x - ROW1, (leftMid.y + leftTop.y) / 2, true);
+
+    dimLineV(leftBot, leftTop, leftBot.x, leftTop.x, leftBot.x - ROW2);
+    drawDimText('300 cm', leftBot.x - ROW2, (leftBot.y + leftTop.y) / 2, true);
+
+    dimLineV(backTop, backPeak, backTop.x, backPeak.x, Math.max(backTop.x, backPeak.x) + ROW1);
+    drawDimText('+45 cm', Math.max(backTop.x, backPeak.x) + ROW1, (backTop.y + backPeak.y) / 2, true);
+
+    // Info text
+    ctx.save();
+    ctx.font = '12px Segoe UI, sans-serif';
+    ctx.fillStyle = LABEL_COLOR;
+    ctx.fillText('REZ — pohled zprava (X=0)', 20, 30);
+    ctx.fillText('Podlaha 2. patra: ' + (CONFIG.H1 * 100 | 0) + ' cm', 20, 50);
+    ctx.fillText('Vyska hrebene: ' + ((CONFIG.H + CONFIG.ROOF_PEAK) * 100 | 0) + ' cm', 20, 70);
+    ctx.restore();
   }
 }
 
@@ -1147,7 +1822,7 @@ function switchView(view) {
     // Zobrazit pouze 1. patro (y = 0 až H1)
     // Kamera je na y=10, takže near=10-H1, far=10+0.1
     orthoCamera.near = 10 - CONFIG.H1 - 0.05;
-    orthoCamera.far  = 10.15;
+    orthoCamera.far = 10.15;
     orthoCamera.updateProjectionMatrix();
   } else if (view === 'floor2') {
     setupOrthoView(
@@ -1157,24 +1832,24 @@ function switchView(view) {
     );
     // Zobrazit pouze 2. patro (y = H1 až H+ROOF_PEAK)
     orthoCamera.near = 10 - CONFIG.H - CONFIG.ROOF_PEAK - 0.3;
-    orthoCamera.far  = 10 - CONFIG.H1 + 0.15;
+    orthoCamera.far = 10 - CONFIG.H1 + 0.15;
     orthoCamera.updateProjectionMatrix();
   } else if (view === 'front') {
     setupOrthoView(
-      new THREE.Vector3(0, H/2, -10),
-      new THREE.Vector3(0, H/2, 0),
+      new THREE.Vector3(0, H / 2, -10),
+      new THREE.Vector3(0, H / 2, 0),
       -hw - pad, hw + pad, H + pad, -pad
     );
   } else if (view === 'side') {
     setupOrthoView(
-      new THREE.Vector3(10, H/2, 0),
-      new THREE.Vector3(0, H/2, 0),
+      new THREE.Vector3(10, H / 2, 0),
+      new THREE.Vector3(0, H / 2, 0),
       -hd - pad, hd + pad, H + pad, -pad
     );
   } else if (view === 'section') {
     setupOrthoView(
-      new THREE.Vector3(10, H/2, 0),
-      new THREE.Vector3(0, H/2, 0),
+      new THREE.Vector3(10, H / 2, 0),
+      new THREE.Vector3(0, H / 2, 0),
       -hd - pad, hd + pad, H + pad, -pad
     );
     sectionPlane.constant = 0; // Clip at X=0
@@ -1192,7 +1867,7 @@ function setupOrthoView(pos, target, left, right, top, bottom) {
   const orthoW = orthoH * aspect;
   const cx = (left + right) / 2;
   const cy = (top + bottom) / 2;
-  orthoCamera = new THREE.OrthographicCamera(cx - orthoW/2, cx + orthoW/2, cy + orthoH/2, cy - orthoH/2, 0.01, 100);
+  orthoCamera = new THREE.OrthographicCamera(cx - orthoW / 2, cx + orthoW / 2, cy + orthoH / 2, cy - orthoH / 2, 0.01, 100);
   orthoCamera.position.copy(pos);
   orthoCamera.lookAt(target);
   activeCamera = orthoCamera;
@@ -1202,12 +1877,12 @@ function setupOrthoView(pos, target, left, right, top, bottom) {
 // View Presets (3D)
 // ============================================================
 const VIEW_PRESETS = {
-  iso:   { pos: [6, 4, -6],   target: [0, 1.5, 0] },
-  front: { pos: [0, 2, -8],   target: [0, 1.5, 0] },
-  back:  { pos: [0, 2,  8],   target: [0, 1.5, 0] },
-  left:  { pos: [-8, 2, 0],   target: [0, 1.5, 0] },
-  right: { pos: [8, 2, 0],    target: [0, 1.5, 0] },
-  top:   { pos: [0, 10, 0],   target: [0, 0, 0] },
+  iso: { pos: [6, 4, -6], target: [0, 1.5, 0] },
+  front: { pos: [0, 2, -8], target: [0, 1.5, 0] },
+  back: { pos: [0, 2, 8], target: [0, 1.5, 0] },
+  left: { pos: [-8, 2, 0], target: [0, 1.5, 0] },
+  right: { pos: [8, 2, 0], target: [0, 1.5, 0] },
+  top: { pos: [0, 10, 0], target: [0, 0, 0] },
 };
 
 function setPreset(name) {
@@ -1308,7 +1983,7 @@ renderer.domElement.addEventListener('touchmove', e => {
 let wireframeOn = false;
 let labelsOn = true;
 
-document.getElementById('toggle-wire').addEventListener('click', function() {
+document.getElementById('toggle-wire').addEventListener('click', function () {
   wireframeOn = !wireframeOn;
   this.classList.toggle('on', wireframeOn);
   playhouse.traverse(c => {
@@ -1318,11 +1993,19 @@ document.getElementById('toggle-wire').addEventListener('click', function() {
   });
 });
 
-document.getElementById('toggle-labels').addEventListener('click', function() {
+document.getElementById('toggle-labels').addEventListener('click', function () {
   labelsOn = !labelsOn;
   this.classList.toggle('on', labelsOn);
   const labelsGroup = playhouse.getObjectByName('labels');
   if (labelsGroup) labelsGroup.visible = labelsOn;
+});
+
+let dimsOn = false;
+document.getElementById('toggle-dims').addEventListener('click', function () {
+  dimsOn = !dimsOn;
+  this.classList.toggle('on', dimsOn);
+  const dimsGroup = playhouse.getObjectByName('dimensions');
+  if (dimsGroup) dimsGroup.visible = dimsOn;
 });
 
 // ============================================================
@@ -1336,6 +2019,119 @@ document.querySelectorAll('.tab').forEach(tab => {
 document.querySelectorAll('.vbtn').forEach(btn => {
   btn.addEventListener('click', () => setPreset(btn.dataset.preset));
 });
+
+// ============================================================
+// 3D Object Picker — raycasting + tooltip
+// ============================================================
+(function () {
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  let tooltipTimer = null;
+
+  // Create tooltip element
+  const tooltip = document.createElement('div');
+  tooltip.id = 'picker-tooltip';
+  tooltip.style.cssText = [
+    'position:fixed',
+    'display:none',
+    'background:rgba(26,31,22,0.88)',
+    'border:1px solid #3a4030',
+    'border-radius:6px',
+    'padding:8px 12px',
+    'color:#d4c9a8',
+    'font-size:12px',
+    'font-family:Segoe UI,sans-serif',
+    'pointer-events:auto',
+    'cursor:pointer',
+    'z-index:100',
+    'backdrop-filter:blur(8px)',
+    'line-height:1.5',
+    'max-width:260px'
+  ].join(';');
+  document.body.appendChild(tooltip);
+
+  function hideTooltip() {
+    tooltip.style.display = 'none';
+    if (tooltipTimer) { clearTimeout(tooltipTimer); tooltipTimer = null; }
+  }
+
+  function findNamedParent(obj) {
+    let current = obj;
+    while (current) {
+      if (current.name && current.parent === playhouse) return current;
+      current = current.parent;
+    }
+    return null;
+  }
+
+  renderer.domElement.addEventListener('click', function (e) {
+    if (currentView !== '3d') return;
+
+    // Hide previous tooltip
+    hideTooltip();
+
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, activeCamera);
+    const hits = raycaster.intersectObjects(playhouse.children, true);
+    if (hits.length === 0) return;
+
+    const hit = hits[0];
+    const group = findNamedParent(hit.object);
+    if (!group) return;
+
+    const name = group.name;
+    const pt = hit.point;
+    const src = 'src/' + name + '.js';
+
+    // Compute bounding box of the clicked mesh in world space
+    var mesh = hit.object;
+    mesh.geometry.computeBoundingBox();
+    var bb = mesh.geometry.boundingBox.clone();
+    bb.applyMatrix4(mesh.matrixWorld);
+    var size = new THREE.Vector3();
+    bb.getSize(size);
+
+    const coords = 'x: ' + pt.x.toFixed(2) + '  y: ' + pt.y.toFixed(2) + '  z: ' + pt.z.toFixed(2);
+    const bbInfo = 'rozsah Y: ' + bb.min.y.toFixed(2) + ' → ' + bb.max.y.toFixed(2) +
+      '  (výška: ' + size.y.toFixed(2) + ')';
+    const sizeInfo = 'rozměr: ' + size.x.toFixed(2) + ' × ' + size.y.toFixed(2) + ' × ' + size.z.toFixed(2);
+    const clipText = '[3D objekt] ' + name + ' (' + src + ') na pozici ' + coords +
+      ', ' + bbInfo + ', ' + sizeInfo + ' — uprav/odstraň tento díl';
+
+    tooltip.innerHTML =
+      '<strong style="color:#b8c89a">' + name + '</strong><br>' +
+      '<span style="color:#8a9a72">' + src + '</span><br>' +
+      coords + '<br>' +
+      '<span style="color:#c9b87a">' + bbInfo + '</span><br>' +
+      '<span style="color:#8a9a72">' + sizeInfo + '</span>' +
+      '<br><span style="color:#6a7a5a;font-size:10px" id="picker-copy-hint">klik = kopirovat</span>';
+
+    // Copy to clipboard on tooltip click
+    tooltip.onclick = function (ev) {
+      ev.stopPropagation();
+      navigator.clipboard.writeText(clipText).then(function () {
+        var hint = document.getElementById('picker-copy-hint');
+        if (hint) hint.textContent = 'zkopirováno!';
+        clearTimeout(tooltipTimer);
+        tooltipTimer = setTimeout(hideTooltip, 1500);
+      });
+    };
+
+    // Position tooltip near cursor, clamped to viewport
+    let tx = e.clientX + 14;
+    let ty = e.clientY + 14;
+    tooltip.style.display = 'block';
+    const rect = tooltip.getBoundingClientRect();
+    if (tx + rect.width > window.innerWidth - 8) tx = e.clientX - rect.width - 8;
+    if (ty + rect.height > window.innerHeight - 8) ty = e.clientY - rect.height - 8;
+    tooltip.style.left = tx + 'px';
+    tooltip.style.top = ty + 'px';
+
+    tooltipTimer = setTimeout(hideTooltip, 3000);
+  });
+})();
 
 // ============================================================
 // Post-processing (SSAO)
@@ -1359,7 +2155,7 @@ function setupPostProcessing() {
       c.addPass(gamma);
     }
     return c;
-  } catch(e) {
+  } catch (e) {
     return null;
   }
 }
@@ -1388,6 +2184,7 @@ function buildScene() {
   playhouse.add(createSlide());
   playhouse.add(createLadder());
   playhouse.add(createLabels());
+  playhouse.add(createDimensions());
 
   // Enable shadows and apply clipping plane to playhouse meshes
   playhouse.traverse(c => {
@@ -1439,7 +2236,7 @@ function animate() {
   requestAnimationFrame(animate);
   if (currentView === '3d' && composer && !composerFailed) {
     composer.passes[0].camera = activeCamera;
-    try { composer.render(); } catch(e) { composerFailed = true; renderer.render(scene, activeCamera); }
+    try { composer.render(); } catch (e) { composerFailed = true; renderer.render(scene, activeCamera); }
   } else {
     renderer.render(scene, activeCamera);
   }
@@ -1463,6 +2260,9 @@ function animate() {
 
 buildScene();
 animate();
-</script>
+
+// === END MODULES ===
+  </script>
 </body>
+
 </html>
