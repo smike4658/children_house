@@ -43,8 +43,8 @@ function switchView(view) {
     activeCamera = perspCamera;
   } else if (view === 'floor1') {
     setupOrthoView(
-      new THREE.Vector3(0, 10, 0),
-      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X, 10, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X, 0, 0),
       -hw - pad, hw + pad, hd + pad, -hd - pad
     );
     // Zobrazit pouze 1. patro (y = 0 až H1)
@@ -60,8 +60,8 @@ function switchView(view) {
     });
   } else if (view === 'floor2') {
     setupOrthoView(
-      new THREE.Vector3(0, 10, 0),
-      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X, 10, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X, 0, 0),
       -hw - pad, hw + pad, hd + pad, -hd - pad
     );
     // Zobrazit pouze 2. patro (y = H1 až H) — bez střechy
@@ -78,25 +78,25 @@ function switchView(view) {
     // Frustum bounds jsou view-space offsety od pozice kamery (ne absolutní world Y)
     const halfH = H / 2 + pad;
     setupOrthoView(
-      new THREE.Vector3(0, H / 2, -10),
-      new THREE.Vector3(0, H / 2, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X, H / 2, -10),
+      new THREE.Vector3(CONFIG.HOUSE_X, H / 2, 0),
       -hw - pad, hw + pad, halfH, -halfH
     );
   } else if (view === 'side') {
     const halfH = H / 2 + pad;
     setupOrthoView(
-      new THREE.Vector3(10, H / 2, 0),
-      new THREE.Vector3(0, H / 2, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X + 10, H / 2, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X, H / 2, 0),
       -hd - pad, hd + pad, halfH, -halfH
     );
   } else if (view === 'section') {
     const halfH = H / 2 + pad;
     setupOrthoView(
-      new THREE.Vector3(10, H / 2, 0),
-      new THREE.Vector3(0, H / 2, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X + 10, H / 2, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X, H / 2, 0),
       -hd - pad, hd + pad, halfH, -halfH
     );
-    sectionPlane.constant = 0; // Clip at X=0
+    sectionPlane.constant = CONFIG.HOUSE_X; // Clip at house center X
   }
 
   // Kreslit kóty a popisky po dokončení přechodu kamery
@@ -122,11 +122,11 @@ function setupOrthoView(pos, target, left, right, top, bottom) {
 // ============================================================
 const VIEW_PRESETS = {
   iso: { pos: [6, 4, -6], target: [0, 1.5, 0] },
-  front: { pos: [0, 2, -8], target: [0, 1.5, 0] },
-  back: { pos: [0, 2, 8], target: [0, 1.5, 0] },
-  left: { pos: [-8, 2, 0], target: [0, 1.5, 0] },
-  right: { pos: [8, 2, 0], target: [0, 1.5, 0] },
-  top: { pos: [0, 10, 0], target: [0, 0, 0] },
+  front: { pos: [CONFIG.HOUSE_X, 2, -8], target: [CONFIG.HOUSE_X, 1.5, 0] },
+  back: { pos: [CONFIG.HOUSE_X, 2, 8], target: [CONFIG.HOUSE_X, 1.5, 0] },
+  left: { pos: [CONFIG.HOUSE_X - 8, 2, 0], target: [CONFIG.HOUSE_X, 1.5, 0] },
+  right: { pos: [CONFIG.HOUSE_X + 8, 2, 0], target: [CONFIG.HOUSE_X, 1.5, 0] },
+  top: { pos: [CONFIG.HOUSE_X, 10, 0], target: [CONFIG.HOUSE_X, 0, 0] },
 };
 
 function setPreset(name) {

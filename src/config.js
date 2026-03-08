@@ -28,6 +28,7 @@ const CONFIG = {
   LADDER_RUNGS: 6,
   RAIL_H: 0.90,
   RAIL_T: 0.04,
+  HOUSE_X: -3.5,  // X pozice domečku ve scéně (záporné = vpravo z pohledu kamery)
 };
 
 const COLORS = {
@@ -44,4 +45,9 @@ const COLORS = {
   grass: '#587A3E',
   sky: '#87CEEB',
   glass: '#a0d0e8',
+  pebbles: '#E6E4E0',
+  hornbeams: '#3A5A28',
+  fenceTex: '#4c4c4c',
+  swingFrame: '#222222',
+  swingSeat: '#CC2222'
 };

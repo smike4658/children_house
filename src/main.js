@@ -21,6 +21,9 @@ function buildScene() {
   playhouse.add(createRailing());
   playhouse.add(createSlide());
   playhouse.add(createLadder());
+  playhouse.add(createSandbox());
+  scene.add(createSurroundings());
+  scene.add(createSwing());
   playhouse.add(createDimensions());
 
   // Enable shadows and apply clipping plane to playhouse meshes
@@ -36,6 +39,7 @@ function buildScene() {
     }
   });
 
+  playhouse.position.x = CONFIG.HOUSE_X;
   scene.add(playhouse);
 
   composer = setupPostProcessing();

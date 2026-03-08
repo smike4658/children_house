@@ -436,6 +436,7 @@ const CONFIG = {
   LADDER_RUNGS: 6,
   RAIL_H: 0.90,
   RAIL_T: 0.04,
+  HOUSE_X: -3.5,  // X pozice domečku ve scéně (záporné = vpravo z pohledu kamery)
 };
 
 const COLORS = {
@@ -452,6 +453,11 @@ const COLORS = {
   grass: '#587A3E',
   sky: '#87CEEB',
   glass: '#a0d0e8',
+  pebbles: '#E6E4E0',
+  hornbeams: '#3A5A28',
+  fenceTex: '#4c4c4c',
+  swingFrame: '#222222',
+  swingSeat: '#CC2222'
 };
 
 // ============================================================
@@ -661,6 +667,15 @@ function setupMaterials() {
   MAT.glass = new THREE.MeshStandardMaterial({ color: 0x88ccee, transparent: true, opacity: 0.4, roughness: 0.05, metalness: 0.2 });
   MAT.concrete = new THREE.MeshStandardMaterial({ color: COLORS.concrete, roughness: 0.95, metalness: 0.0 });
   MAT.beam = MAT.posts;
+
+  // Surroundings
+  MAT.pebbles = new THREE.MeshStandardMaterial({ color: COLORS.pebbles, roughness: 1.0, metalness: 0.0 });
+  MAT.hornbeams = new THREE.MeshStandardMaterial({ color: COLORS.hornbeams, roughness: 0.9, metalness: 0.0 });
+  MAT.fenceTex = new THREE.MeshStandardMaterial({ color: COLORS.fenceTex, roughness: 0.9, metalness: 0.0 });
+
+  // Swing
+  MAT.swingFrame = new THREE.MeshStandardMaterial({ color: COLORS.swingFrame, roughness: 0.7, metalness: 0.3 });
+  MAT.swingSeat = new THREE.MeshStandardMaterial({ color: COLORS.swingSeat, roughness: 0.8, metalness: 0.1 });
 }
 
 // ============================================================
@@ -725,7 +740,7 @@ function createContactShadow() {
     new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.15, depthWrite: false })
   );
   mesh.rotation.x = -Math.PI / 2;
-  mesh.position.set(0, 0.002, 0);
+  mesh.position.set(CONFIG.HOUSE_X, 0.002, 0);
   mesh.name = 'contactShadow';
   return mesh;
 }
@@ -1393,6 +1408,239 @@ function createLadder() {
 }
 
 // ============================================================
+// Sandbox — pískoviště (140x140 vpravo vzadu)
+// ============================================================
+function createSandbox() {
+    const g = new THREE.Group(); g.name = 'sandbox';
+    const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+    const size = 1.40;
+    const h = 0.20;
+    const t = 0.04;
+
+    // Pozice: navazuje na pravou stěnu (+X = hw) a lícovitě na zadní stěnu (+Z = hd)
+    const leftX = hw;
+    const rightX = hw + size;
+    const backZ = hd;
+    const frontZ = hd - size;
+
+    const centerX = (leftX + rightX) / 2;
+    const centerZ = (backZ + frontZ) / 2;
+
+    // Rám pískoviště
+    // Zadní (podél X)
+    const bBack = box(size, h, t, MAT.posts);
+    bBack.position.set(0, h / 2, size / 2 - t / 2);
+    // Přední (podél X)
+    const bFront = box(size, h, t, MAT.posts);
+    bFront.position.set(0, h / 2, -size / 2 + t / 2);
+    // Levý (podél Z)
+    const bLeft = box(t, h, size - 2 * t, MAT.posts);
+    bLeft.position.set(-size / 2 + t / 2, h / 2, 0);
+    // Pravý (podél Z)
+    const bRight = box(t, h, size - 2 * t, MAT.posts);
+    bRight.position.set(size / 2 - t / 2, h / 2, 0);
+
+    g.add(bBack);
+    g.add(bFront);
+    g.add(bLeft);
+    g.add(bRight);
+
+    // Písek
+    const sandGeom = new THREE.BoxGeometry(size - 2 * t, h - 0.05, size - 2 * t);
+    const sandMat = new THREE.MeshPhongMaterial({ color: '#D4C07B' });
+    const sandMesh = new THREE.Mesh(sandGeom, sandMat);
+    sandMesh.position.set(0, (h - 0.05) / 2, 0);
+    sandMesh.receiveShadow = true;
+    g.add(sandMesh);
+
+    g.position.set(centerX, 0, centerZ);
+
+    return g;
+}
+
+// ============================================================
+// Surroundings — okolí (kamínky, habry, plot)
+// ============================================================
+function createSurroundings() {
+    const g = new THREE.Group(); g.name = 'surroundings';
+
+    // Pokrývá domeček, pískoviště i houpačku.
+    // Domeček levý okraj: CONFIG.HOUSE_X - CONFIG.W/2 ≈ -5.05
+    // Houpačka pravý okraj: cca +3.15
+    const houseLeft = CONFIG.HOUSE_X - CONFIG.W / 2 - 0.5;
+    const swingRight = CONFIG.HOUSE_X + CONFIG.W / 2 + 1.40 + 0.70 + 3.00 + 0.5;
+    const pWidth = swingRight - houseLeft;
+    const pDepth = 2.5;
+    const pZ = 0; // střed na Z=0
+    const cX = (houseLeft + swingRight) / 2;
+
+    const pebblesGeometry = new THREE.BoxGeometry(pWidth, 0.04, pDepth);
+    const pebblesMesh = new THREE.Mesh(pebblesGeometry, MAT.pebbles);
+    pebblesMesh.position.set(cX, 0.02, pZ);
+    pebblesMesh.receiveShadow = true;
+    g.add(pebblesMesh);
+
+    // 2. Habry (110cm pás za kamínky = z 1.25 do 2.35)
+    // Výška 1.0m, šířka 9m (stejná jako kamínky)
+    const hWidth = pWidth;
+    const hDepth = 1.1;
+    const hHeight = 1.0;
+    const hZ = pZ + pDepth / 2 + hDepth / 2; // 1.25 + 0.55 = 1.80
+
+    const hornbeamsGeometry = new THREE.BoxGeometry(hWidth, hHeight, hDepth);
+    const hornbeamsMesh = new THREE.Mesh(hornbeamsGeometry, MAT.hornbeams);
+    hornbeamsMesh.position.set(cX, hHeight / 2, hZ);
+    hornbeamsMesh.castShadow = true;
+    hornbeamsMesh.receiveShadow = true;
+    g.add(hornbeamsMesh);
+
+    // 3. Plot (nepruhledná textilie, výška 1.8m)
+    // Za habry (z = 2.35 do 2.39)
+    const fWidth = pWidth;
+    const fDepth = 0.04;
+    const fHeight = 1.8;
+    const fZ = pZ + pDepth / 2 + hDepth + fDepth / 2; // 1.25 + 1.1 + 0.02 = 2.37
+
+    const fenceGeometry = new THREE.BoxGeometry(fWidth, fHeight, fDepth);
+    const fenceMesh = new THREE.Mesh(fenceGeometry, MAT.fenceTex);
+    fenceMesh.position.set(cX, fHeight / 2, fZ);
+    fenceMesh.castShadow = true;
+    fenceMesh.receiveShadow = true;
+    g.add(fenceMesh);
+
+    return g;
+}
+
+// ============================================================
+// Swing — houpačka (z jeklů 8x8 cm, vedle domečku)
+// Portálový rám, dvě houpačky:
+//   1) klasické ploché sedátko na řetězech (vlevo)
+//   2) červené baby sedátko s opěrkou na lanech (vpravo)
+// ============================================================
+function createSwing() {
+    const g = new THREE.Group(); g.name = 'swing';
+
+    const width = 3.00;
+    const height = 2.25;
+    const jekl = 0.08;
+
+    // Pozice: napravo od pískoviště, 70 cm mezera
+    const sandboxRightX = CONFIG.HOUSE_X + CONFIG.W / 2 + 1.40;
+    const leftX = sandboxRightX + 0.70;
+    const cX = leftX + width / 2;
+    const cZ = 0;
+
+    // === RÁM (portál: 2 nohy + příčník) ===
+
+    // Levá noha
+    const bLeft = box(jekl, height, jekl, MAT.swingFrame);
+    bLeft.position.set(-width / 2, height / 2, 0);
+    g.add(bLeft);
+
+    // Pravá noha
+    const bRight = box(jekl, height, jekl, MAT.swingFrame);
+    bRight.position.set(width / 2, height / 2, 0);
+    g.add(bRight);
+
+    // Vrchní příčník
+    const bTop = box(width + jekl, jekl, jekl, MAT.swingFrame);
+    bTop.position.set(0, height - jekl / 2, 0);
+    g.add(bTop);
+
+    // === Materiály pro závěsy ===
+    const chainMat = new THREE.MeshStandardMaterial({ color: '#999999', metalness: 0.9, roughness: 0.15 });
+    const ropeMat = new THREE.MeshStandardMaterial({ color: '#D0C8A0', roughness: 0.9, metalness: 0.0 });
+
+    // === HOUPAČKA 1: klasické ploché sedátko (vlevo) ===
+    const seat1X = -width / 4; // čtvrtina zleva
+    const seat1H = 0.45;       // výška sedátka nad zemí
+    const seat1W = 0.44;
+    const seat1D = 0.18;
+    const seat1Thick = 0.025;
+    const chain1Len = height - seat1H - jekl;
+
+    // Řetězy (tenké válce)
+    const chain1Geom = new THREE.CylinderGeometry(0.008, 0.008, chain1Len);
+
+    const ch1L = new THREE.Mesh(chain1Geom, chainMat);
+    ch1L.position.set(seat1X - seat1W / 2 + 0.03, seat1H + chain1Len / 2, 0);
+    ch1L.castShadow = true;
+    g.add(ch1L);
+
+    const ch1R = new THREE.Mesh(chain1Geom, chainMat);
+    ch1R.position.set(seat1X + seat1W / 2 - 0.03, seat1H + chain1Len / 2, 0);
+    ch1R.castShadow = true;
+    g.add(ch1R);
+
+    // Ploché sedátko (černé)
+    const seatBlackMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.85, metalness: 0.0 });
+    const seat1Mesh = box(seat1W, seat1Thick, seat1D, seatBlackMat);
+    seat1Mesh.position.set(seat1X, seat1H, 0);
+    seat1Mesh.castShadow = true;
+    g.add(seat1Mesh);
+
+    // === HOUPAČKA 2: baby sedátko s opěrkou (vpravo, červené) ===
+    const seat2X = width / 4; // čtvrtina zprava
+    const seat2H = 0.55;      // trochu výš (baby sedátko)
+    const rope2Len = height - seat2H - jekl;
+
+    // Lana (béžová)
+    const rope2Geom = new THREE.CylinderGeometry(0.006, 0.006, rope2Len);
+
+    const rp2L = new THREE.Mesh(rope2Geom, ropeMat);
+    rp2L.position.set(seat2X - 0.14, seat2H + rope2Len / 2, 0);
+    rp2L.castShadow = true;
+    g.add(rp2L);
+
+    const rp2R = new THREE.Mesh(rope2Geom, ropeMat);
+    rp2R.position.set(seat2X + 0.14, seat2H + rope2Len / 2, 0);
+    rp2R.castShadow = true;
+    g.add(rp2R);
+
+    // Baby sedátko — zjednodušený tvar: sedák + opěrka + přední zarážka
+    const babyW = 0.30;
+    const babyD = 0.28;
+    const babySeatThick = 0.03;
+    const babyBackH = 0.22;
+    const babyFrontH = 0.12;
+
+    // Sedák
+    const babySeat = box(babyW, babySeatThick, babyD, MAT.swingSeat);
+    babySeat.position.set(seat2X, seat2H, 0);
+    babySeat.castShadow = true;
+    g.add(babySeat);
+
+    // Opěrka (zadní)
+    const babyBack = box(babyW, babyBackH, babySeatThick, MAT.swingSeat);
+    babyBack.position.set(seat2X, seat2H + babyBackH / 2, babyD / 2 - babySeatThick / 2);
+    babyBack.castShadow = true;
+    g.add(babyBack);
+
+    // Přední zarážka (nižší)
+    const babyFront = box(babyW, babyFrontH, babySeatThick, MAT.swingSeat);
+    babyFront.position.set(seat2X, seat2H + babyFrontH / 2, -babyD / 2 + babySeatThick / 2);
+    babyFront.castShadow = true;
+    g.add(babyFront);
+
+    // Boční stěnky baby sedátka
+    const babySideH = 0.10;
+    const babySideL = box(babySeatThick, babySideH, babyD, MAT.swingSeat);
+    babySideL.position.set(seat2X - babyW / 2 + babySeatThick / 2, seat2H + babySideH / 2, 0);
+    babySideL.castShadow = true;
+    g.add(babySideL);
+
+    const babySideR = box(babySeatThick, babySideH, babyD, MAT.swingSeat);
+    babySideR.position.set(seat2X + babyW / 2 - babySeatThick / 2, seat2H + babySideH / 2, 0);
+    babySideR.castShadow = true;
+    g.add(babySideR);
+
+    // Posunout celou skupinu na místo
+    g.position.set(cX, 0, cZ);
+
+    return g;
+}
+
+// ============================================================
 // 3D Dimensions — rozmerove cary ve 3D scene (toggle)
 // ============================================================
 function makeDimLabel(text) {
@@ -1485,7 +1733,19 @@ function createDimensions() {
     '172 cm'
   ));
 
-
+  // Pískoviště
+  g.add(makeDimLine(
+    new THREE.Vector3(hw, 0, hd),
+    new THREE.Vector3(hw + 1.40, 0, hd),
+    new THREE.Vector3(0, 0, 0.4),
+    '140 cm'
+  ));
+  g.add(makeDimLine(
+    new THREE.Vector3(hw + 1.40, 0, hd - 1.40),
+    new THREE.Vector3(hw + 1.40, 0, hd),
+    new THREE.Vector3(0.4, 0, 0),
+    '140 cm'
+  ));
 
   g.visible = false;
   return g;
@@ -1892,8 +2152,8 @@ function switchView(view) {
     activeCamera = perspCamera;
   } else if (view === 'floor1') {
     setupOrthoView(
-      new THREE.Vector3(0, 10, 0),
-      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X, 10, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X, 0, 0),
       -hw - pad, hw + pad, hd + pad, -hd - pad
     );
     // Zobrazit pouze 1. patro (y = 0 až H1)
@@ -1909,8 +2169,8 @@ function switchView(view) {
     });
   } else if (view === 'floor2') {
     setupOrthoView(
-      new THREE.Vector3(0, 10, 0),
-      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X, 10, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X, 0, 0),
       -hw - pad, hw + pad, hd + pad, -hd - pad
     );
     // Zobrazit pouze 2. patro (y = H1 až H) — bez střechy
@@ -1927,25 +2187,25 @@ function switchView(view) {
     // Frustum bounds jsou view-space offsety od pozice kamery (ne absolutní world Y)
     const halfH = H / 2 + pad;
     setupOrthoView(
-      new THREE.Vector3(0, H / 2, -10),
-      new THREE.Vector3(0, H / 2, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X, H / 2, -10),
+      new THREE.Vector3(CONFIG.HOUSE_X, H / 2, 0),
       -hw - pad, hw + pad, halfH, -halfH
     );
   } else if (view === 'side') {
     const halfH = H / 2 + pad;
     setupOrthoView(
-      new THREE.Vector3(10, H / 2, 0),
-      new THREE.Vector3(0, H / 2, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X + 10, H / 2, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X, H / 2, 0),
       -hd - pad, hd + pad, halfH, -halfH
     );
   } else if (view === 'section') {
     const halfH = H / 2 + pad;
     setupOrthoView(
-      new THREE.Vector3(10, H / 2, 0),
-      new THREE.Vector3(0, H / 2, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X + 10, H / 2, 0),
+      new THREE.Vector3(CONFIG.HOUSE_X, H / 2, 0),
       -hd - pad, hd + pad, halfH, -halfH
     );
-    sectionPlane.constant = 0; // Clip at X=0
+    sectionPlane.constant = CONFIG.HOUSE_X; // Clip at house center X
   }
 
   // Kreslit kóty a popisky po dokončení přechodu kamery
@@ -1971,11 +2231,11 @@ function setupOrthoView(pos, target, left, right, top, bottom) {
 // ============================================================
 const VIEW_PRESETS = {
   iso: { pos: [6, 4, -6], target: [0, 1.5, 0] },
-  front: { pos: [0, 2, -8], target: [0, 1.5, 0] },
-  back: { pos: [0, 2, 8], target: [0, 1.5, 0] },
-  left: { pos: [-8, 2, 0], target: [0, 1.5, 0] },
-  right: { pos: [8, 2, 0], target: [0, 1.5, 0] },
-  top: { pos: [0, 10, 0], target: [0, 0, 0] },
+  front: { pos: [CONFIG.HOUSE_X, 2, -8], target: [CONFIG.HOUSE_X, 1.5, 0] },
+  back: { pos: [CONFIG.HOUSE_X, 2, 8], target: [CONFIG.HOUSE_X, 1.5, 0] },
+  left: { pos: [CONFIG.HOUSE_X - 8, 2, 0], target: [CONFIG.HOUSE_X, 1.5, 0] },
+  right: { pos: [CONFIG.HOUSE_X + 8, 2, 0], target: [CONFIG.HOUSE_X, 1.5, 0] },
+  top: { pos: [CONFIG.HOUSE_X, 10, 0], target: [CONFIG.HOUSE_X, 0, 0] },
 };
 
 function setPreset(name) {
@@ -2122,7 +2382,7 @@ let walkModeOn = false;
 let walkChar = null;
 let walkYaw = 0;
 let walkPitch = 0;
-let walkPos = new THREE.Vector3(2.5, 0, -3);
+let walkPos = new THREE.Vector3(CONFIG.HOUSE_X + 2.5, 0, -3);
 const walkSpeed = 0.04;
 const walkClimbSpeed = 0.025;
 const walkKeys = { w: false, a: false, s: false, d: false };
@@ -2146,12 +2406,13 @@ const CHAR_ARM_H = 0.35;
 // Ladder geometry (must match ladder.js)
 function getLadderInfo() {
   const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+  const ox = CONFIG.HOUSE_X;
   const projX = 1.0;
   const ladderZ = -hd + CONFIG.TD * 0.5;
   return {
-    bottomX: hw + projX,
+    bottomX: ox + hw + projX,
     bottomY: 0,
-    topX: hw,
+    topX: ox + hw,
     topY: CONFIG.H1,
     z: ladderZ,
     grabRadius: 0.5, // how close you need to be to grab on
@@ -2239,8 +2500,9 @@ function animateCharacter(isMoving) {
 function isOnFloor2(px, pz) {
   const hw = CONFIG.W / 2;
   const hd = CONFIG.D / 2;
+  const ox = CONFIG.HOUSE_X;
   const margin = 0.05;
-  return px > -hw + margin && px < hw - margin && pz > -hd + margin && pz < hd - margin;
+  return px > ox - hw + margin && px < ox + hw - margin && pz > -hd + margin && pz < hd - margin;
 }
 
 // Get the floor height at a given position
@@ -2677,6 +2939,9 @@ function buildScene() {
   playhouse.add(createRailing());
   playhouse.add(createSlide());
   playhouse.add(createLadder());
+  playhouse.add(createSandbox());
+  scene.add(createSurroundings());
+  scene.add(createSwing());
   playhouse.add(createDimensions());
 
   // Enable shadows and apply clipping plane to playhouse meshes
@@ -2692,6 +2957,7 @@ function buildScene() {
     }
   });
 
+  playhouse.position.x = CONFIG.HOUSE_X;
   scene.add(playhouse);
 
   composer = setupPostProcessing();

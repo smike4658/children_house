@@ -129,4 +129,13 @@ function setupMaterials() {
   MAT.glass = new THREE.MeshStandardMaterial({ color: 0x88ccee, transparent: true, opacity: 0.4, roughness: 0.05, metalness: 0.2 });
   MAT.concrete = new THREE.MeshStandardMaterial({ color: COLORS.concrete, roughness: 0.95, metalness: 0.0 });
   MAT.beam = MAT.posts;
+
+  // Surroundings
+  MAT.pebbles = new THREE.MeshStandardMaterial({ color: COLORS.pebbles, roughness: 1.0, metalness: 0.0 });
+  MAT.hornbeams = new THREE.MeshStandardMaterial({ color: COLORS.hornbeams, roughness: 0.9, metalness: 0.0 });
+  MAT.fenceTex = new THREE.MeshStandardMaterial({ color: COLORS.fenceTex, roughness: 0.9, metalness: 0.0 });
+
+  // Swing
+  MAT.swingFrame = new THREE.MeshStandardMaterial({ color: COLORS.swingFrame, roughness: 0.7, metalness: 0.3 });
+  MAT.swingSeat = new THREE.MeshStandardMaterial({ color: COLORS.swingSeat, roughness: 0.8, metalness: 0.1 });
 }

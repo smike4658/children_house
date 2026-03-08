@@ -91,7 +91,19 @@ function createDimensions() {
     '172 cm'
   ));
 
-
+  // Pískoviště
+  g.add(makeDimLine(
+    new THREE.Vector3(hw, 0, hd),
+    new THREE.Vector3(hw + 1.40, 0, hd),
+    new THREE.Vector3(0, 0, 0.4),
+    '140 cm'
+  ));
+  g.add(makeDimLine(
+    new THREE.Vector3(hw + 1.40, 0, hd - 1.40),
+    new THREE.Vector3(hw + 1.40, 0, hd),
+    new THREE.Vector3(0.4, 0, 0),
+    '140 cm'
+  ));
 
   g.visible = false;
   return g;

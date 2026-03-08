@@ -24,6 +24,9 @@ MODULES=(
   src/railing.js
   src/slide.js
   src/ladder.js
+  src/sandbox.js
+  src/surroundings.js
+  src/swing.js
   src/dimensions.js
   src/views.js
   src/controls.js

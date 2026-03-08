@@ -5,7 +5,7 @@ let walkModeOn = false;
 let walkChar = null;
 let walkYaw = 0;
 let walkPitch = 0;
-let walkPos = new THREE.Vector3(2.5, 0, -3);
+let walkPos = new THREE.Vector3(CONFIG.HOUSE_X + 2.5, 0, -3);
 const walkSpeed = 0.04;
 const walkClimbSpeed = 0.025;
 const walkKeys = { w: false, a: false, s: false, d: false };
@@ -29,12 +29,13 @@ const CHAR_ARM_H = 0.35;
 // Ladder geometry (must match ladder.js)
 function getLadderInfo() {
   const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+  const ox = CONFIG.HOUSE_X;
   const projX = 1.0;
   const ladderZ = -hd + CONFIG.TD * 0.5;
   return {
-    bottomX: hw + projX,
+    bottomX: ox + hw + projX,
     bottomY: 0,
-    topX: hw,
+    topX: ox + hw,
     topY: CONFIG.H1,
     z: ladderZ,
     grabRadius: 0.5, // how close you need to be to grab on
@@ -122,8 +123,9 @@ function animateCharacter(isMoving) {
 function isOnFloor2(px, pz) {
   const hw = CONFIG.W / 2;
   const hd = CONFIG.D / 2;
+  const ox = CONFIG.HOUSE_X;
   const margin = 0.05;
-  return px > -hw + margin && px < hw - margin && pz > -hd + margin && pz < hd - margin;
+  return px > ox - hw + margin && px < ox + hw - margin && pz > -hd + margin && pz < hd - margin;
 }
 
 // Get the floor height at a given position
