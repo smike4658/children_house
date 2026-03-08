@@ -34,6 +34,16 @@ function switchView(view) {
     }
   });
 
+  // Vedlejší assety (pískoviště, houpačka, okolí) — jen v 3D pohledu
+  // Sandbox je v playhouse group
+  playhouse.traverse(c => {
+    if (c.name === 'sandbox') c.visible = is3D;
+  });
+  // Swing a surroundings jsou přímo ve scene
+  scene.traverse(c => {
+    if (c.name === 'swing' || c.name === 'surroundings') c.visible = is3D;
+  });
+
   // Stíny jen v 3D pohledu — v technických výkresech ruší
   renderer.shadowMap.enabled = is3D;
   dirLight.castShadow = is3D;

@@ -23,9 +23,8 @@ const CONFIG = {
   FRONT_WIN_H: 0.50,
   SLIDE_LEN: 2.60,
   SLIDE_W: 0.42,
-  LADDER_W: 0.45,
-  LADDER_H: 1.85,
-  LADDER_RUNGS: 6,
+  STAIRS_W: 0.62,
+  STAIRS_RUN: 1.60,
   RAIL_H: 0.90,
   RAIL_T: 0.04,
   HOUSE_X: -3.5,  // X pozice domečku ve scéně (záporné = vpravo z pohledu kamery)

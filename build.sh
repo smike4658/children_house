@@ -23,7 +23,7 @@ MODULES=(
   src/roof.js
   src/railing.js
   src/slide.js
-  src/ladder.js
+  src/stairs.js
   src/sandbox.js
   src/surroundings.js
   src/swing.js

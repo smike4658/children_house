@@ -431,9 +431,8 @@ const CONFIG = {
   FRONT_WIN_H: 0.50,
   SLIDE_LEN: 2.60,
   SLIDE_W: 0.42,
-  LADDER_W: 0.45,
-  LADDER_H: 1.85,
-  LADDER_RUNGS: 6,
+  STAIRS_W: 0.62,
+  STAIRS_RUN: 1.60,
   RAIL_H: 0.90,
   RAIL_T: 0.04,
   HOUSE_X: -3.5,  // X pozice domečku ve scéně (záporné = vpravo z pohledu kamery)
@@ -1302,6 +1301,14 @@ function createRailing() {
     addPost(xLeft, z, RH);
   }
 
+  // Pravé zábradlí (+X strana terasy) - místo původního žebříku
+  const xRight = hw;
+  const numRight = 3;
+  for (let i = 0; i <= numRight; i++) {
+    const z = zFront + CONFIG.TD / numRight * i;
+    addPost(xRight, z, RH);
+  }
+
   // Vodorovné latě (4 nad sebou)
   const gapY = (RH - numSlats * slatH) / 4; // 4 mezery pro 4 latě, horní lícuje s výškou sloupků
   const gapStartX = -hw + CONFIG.W / numFront; // Druhý sloupek (x: -0.93)
@@ -1310,16 +1317,17 @@ function createRailing() {
     const y = baseY + gapY + slatH / 2 + i * (slatH + gapY);
 
     // Přední latě (připevněné zepředu)
-    if (i === numSlats - 1) {
-      // Nejvyšší lať je vcelku přes celou šířku
-      addSlat(-hw - RT / 2 - slatT, zFront, hw + RT / 2 + slatT, zFront, y, 0, -(RT / 2 + slatT / 2));
-    } else {
-      // Spodní 3 latě začínají až od druhého sloupku, aby byl volný průchod ke skluzavce
-      addSlat(gapStartX - RT / 2, zFront, hw + RT / 2 + slatT, zFront, y, 0, -(RT / 2 + slatT / 2));
-    }
+    // Všechny latě jdou pouze mezi sloupky x=-0.93 a x=0.93
+    // Vznikne tak volný průchod pro klouzačku (vlevo -1.55 až -0.93) a schody (vpravo 0.93 až 1.55)
+    // gapStartX je -0.93. Pravý konec bude -gapStartX (tedy +0.93).
+    const gapEndX = -gapStartX;
+    addSlat(gapStartX - RT / 2, zFront, gapEndX + RT / 2 + slatT, zFront, y, 0, -(RT / 2 + slatT / 2));
 
     // Levé latě (připevněné zleva)
     addSlat(xLeft, zFront - RT / 2, xLeft, divZ, y, -(RT / 2 + slatT / 2), 0);
+
+    // Pravé latě (připevněné zprava)
+    addSlat(xRight, zFront - RT / 2, xRight, divZ, y, (RT / 2 + slatT / 2), 0);
   }
 
   return g;
@@ -1359,52 +1367,80 @@ function createSlide() {
 }
 
 // ============================================================
-// Ladder — žebřík (pravá strana +X, zvenku, nakloněn 75° od vodorovné)
+// Stairs — schody na terasu
 // ============================================================
-function createLadder() {
-  const g = new THREE.Group(); g.name = 'ladder';
-  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+function createStairs() {
+    const g = new THREE.Group(); g.name = 'stairs';
+    const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
 
-  const LW = CONFIG.LADDER_W;
-  const LH = CONFIG.LADDER_H;
+    const STAIRS_W = CONFIG.STAIRS_W;
+    const STAIRS_RUN = CONFIG.STAIRS_RUN;
 
-  // Žebřík opřen o PRAVOU stěnu (+X) zvenku:
-  //   - vršek: x = +hw (u stěny), y = H1 (podlaha 2. patra)
-  //   - spodek: 1m od stěny na zemi
-  const projX = 1.0; // spodek žebříku 1m od stěny
-  const tilt = Math.asin(projX / LH); // úhel od svislice
+    // Pozice za sloupkem x = 0.93 a končící na x = 1.55
+    const startX = 0.93 + STAIRS_W / 2; // = 1.24
 
-  // Spodek žebříku na zemi, vně pravé stěny (+X)
-  const bottomX = hw + projX;
-  const bottomY = 0;
-  // Pozice podél Z: přibližně uprostřed terasy
-  const ladderZ = -hd + CONFIG.TD * 0.5;
+    const rise = CONFIG.H1; // 1.50
+    const run = STAIRS_RUN;
+    const length = Math.sqrt(run * run + rise * rise);
+    const angle = Math.atan2(rise, run);
 
-  // Skupinka postavena svisle (podél +Y), pak rotována
-  const ladderGroup = new THREE.Group();
+    const stairsGroup = new THREE.Group();
 
-  // Dvě boční lišty (bílé)
-  [-1, 1].forEach(side => {
-    const rail = box(0.05, LH, 0.05, MAT.walls);
-    rail.position.set(0, LH / 2, side * LW / 2);
-    ladderGroup.add(rail);
-  });
+    const stringerT = 0.05;
+    const stringerH = 0.16;
 
-  // Příčle (dřevěné)
-  for (let i = 0; i < CONFIG.LADDER_RUNGS; i++) {
-    const t = (i + 0.5) / CONFIG.LADDER_RUNGS;
-    const rung = box(0.04, 0.04, LW, MAT.posts);
-    rung.position.set(0, LH * t, 0);
-    ladderGroup.add(rung);
-  }
+    // Dvě boční schodnice (bílé)
+    [-1, 1].forEach(side => {
+        const stringer = box(stringerT, stringerH, length, MAT.walls);
+        stringer.position.set(side * (STAIRS_W / 2 - stringerT / 2), rise / 2, -run / 2);
+        // Nastavení úhlu stoupání
+        stringer.rotation.x = -angle;
+        stairsGroup.add(stringer);
+    });
 
-  // Rotace: +tilt kolem Z nakloní +Y vršek ke -X (žebřík se opírá o pravou stěnu +X zvenku)
-  ladderGroup.rotation.z = tilt;
-  // Posun: spodek na správné místo vně pravé stěny (+X)
-  ladderGroup.position.set(bottomX, bottomY, ladderZ);
+    // Stupně (dřevěné)
+    const numSteps = 9;
+    const stepD = 0.18; // Hloubka nášlapu 18cm
+    const stepT = 0.035;
+    const stepW = STAIRS_W - 2 * stringerT;
 
-  g.add(ladderGroup);
-  return g;
+    for (let i = 1; i <= numSteps; i++) {
+        const fraction = i / (numSteps + 1);
+        const step = box(stepW, stepT, stepD, MAT.floor);
+        // Stupnice jdou od shora dolů (z = 0 do z = -run)
+        const sy = rise - fraction * rise;
+        const sz = -fraction * run;
+        step.position.set(0, sy, sz);
+        stairsGroup.add(step);
+    }
+
+    // Zábradlí schodů (madlo) - na levé straně z pohledu zahrady (+X v lokálních osách)
+    const handrailSide = 1;
+    const postH = 0.90;
+
+    // Spodní sloupek madla
+    const botPost = box(0.06, postH, 0.06, MAT.posts);
+    botPost.position.set(handrailSide * (STAIRS_W / 2 - stringerT / 2), postH / 2, -run);
+    botPost.castShadow = true;
+    stairsGroup.add(botPost);
+
+    // Madlo (horní prkno)
+    const handrail = box(0.04, 0.08, length, MAT.walls);
+    handrail.position.set(handrailSide * (STAIRS_W / 2 - stringerT / 2 + 0.05), rise / 2 + postH, -run / 2);
+    handrail.rotation.x = -angle;
+    stairsGroup.add(handrail);
+
+    // Spodní prkno
+    const lowerRail = box(0.02, 0.08, length, MAT.walls);
+    lowerRail.position.set(handrailSide * (STAIRS_W / 2 - stringerT / 2 + 0.04), rise / 2 + postH - 0.35, -run / 2);
+    lowerRail.rotation.x = -angle;
+    stairsGroup.add(lowerRail);
+
+    // Celková pozice schodů: u přední strany terasy (z = -hd), u sloupku x = 0.93 - 1.55
+    stairsGroup.position.set(startX, 0, -hd);
+    g.add(stairsGroup);
+
+    return g;
 }
 
 // ============================================================
@@ -1885,16 +1921,17 @@ function drawDimensions(view) {
   }
 
   var hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+  var hx = CONFIG.HOUSE_X;  // world X offset domečku
   var divZ = CONFIG.divZ;
 
   // ---- PUDORYS 1. PATRO ----
   if (view === 'floor1') {
     // Kamera je nad domem, přední strana (-Z) je nahoře (malé screen Y),
     // zadní strana (+Z) je dole (velké screen Y).
-    var tl = ws(-hw, 0, hd);   // screen dolů-vlevo (zadní-levý)
-    var tr = ws(hw, 0, hd);    // screen dolů-vpravo (zadní-pravý)
-    var bl = ws(-hw, 0, -hd);  // screen nahoru-vlevo (přední-levý)
-    var br = ws(hw, 0, -hd);   // screen nahoru-vpravo (přední-pravý)
+    var tl = ws(hx-hw, 0, hd);   // screen dolů-vlevo (zadní-levý)
+    var tr = ws(hx+hw, 0, hd);    // screen dolů-vpravo (zadní-pravý)
+    var bl = ws(hx-hw, 0, -hd);  // screen nahoru-vlevo (přední-levý)
+    var br = ws(hx+hw, 0, -hd);   // screen nahoru-vpravo (přední-pravý)
 
     // Sirka 310 cm — pod zadní hranou budovy (mimo budovu dole)
     dimLineH(bl, br, tl.y, tr.y, tl.y + ROW2);
@@ -1905,17 +1942,17 @@ function drawDimensions(view) {
     drawDimText('242 cm', br.x + ROW2, (br.y + tr.y) / 2, true);
 
     // Popisek
-    drawAreaLabel('PRIZEMI — otevreno vpredu', (tl.x + br.x) / 2, (tl.y + bl.y) / 2, null);
+    drawAreaLabel('PRIZEMI — otevreno vpredu', (tl.x + tr.x) / 2, (tl.y + bl.y) / 2, null);
   }
 
   // ---- PUDORYS 2. PATRO ----
   else if (view === 'floor2') {
-    var tl = ws(-hw, 0, hd);
-    var tr = ws(hw, 0, hd);
-    var bl = ws(-hw, 0, -hd);
-    var br = ws(hw, 0, -hd);
-    var divR = ws(hw, 0, divZ);   // delici cara vpravo
-    var divL = ws(-hw, 0, divZ);  // delici cara vlevo
+    var tl = ws(hx-hw, 0, hd);
+    var tr = ws(hx+hw, 0, hd);
+    var bl = ws(hx-hw, 0, -hd);
+    var br = ws(hx+hw, 0, -hd);
+    var divR = ws(hx+hw, 0, divZ);   // delici cara vpravo
+    var divL = ws(hx-hw, 0, divZ);  // delici cara vlevo
 
     // Sirka 310 cm — pod zadní hranou budovy (mimo budovu dole)
     dimLineH(bl, br, tl.y, tr.y, tl.y + ROW2);
@@ -1940,11 +1977,11 @@ function drawDimensions(view) {
 
   // ---- NARYS ZEPREDU ----
   else if (view === 'front') {
-    var bl = ws(-hw, 0, -hd);
-    var br = ws(hw, 0, -hd);
-    var tlMid = ws(-hw, CONFIG.H1, -hd);
-    var tlTop = ws(-hw, CONFIG.H, -hd);
-    var tlPeak = ws(-hw, CONFIG.H + CONFIG.ROOF_PEAK, -hd);
+    var bl = ws(hx-hw, 0, -hd);
+    var br = ws(hx+hw, 0, -hd);
+    var tlMid = ws(hx-hw, CONFIG.H1, -hd);
+    var tlTop = ws(hx-hw, CONFIG.H, -hd);
+    var tlPeak = ws(hx-hw, CONFIG.H + CONFIG.ROOF_PEAK, -hd);
 
     // Sirka 310 cm (dole)
     dimLineH(bl, br, bl.y, br.y, bl.y + ROW1);
@@ -1967,20 +2004,20 @@ function drawDimensions(view) {
     drawDimText('+45 cm', tlTop.x - ROW2, (tlTop.y + tlPeak.y) / 2, true);
 
     // Zabradli 90 cm (vpravo, rada 1)
-    var railBot = ws(hw, CONFIG.H1, -hd);
-    var railTop = ws(hw, CONFIG.H1 + CONFIG.RAIL_H, -hd);
+    var railBot = ws(hx+hw, CONFIG.H1, -hd);
+    var railTop = ws(hx+hw, CONFIG.H1 + CONFIG.RAIL_H, -hd);
     dimLineV(railBot, railTop, railBot.x, railTop.x, railBot.x + ROW1);
     drawDimText('90 cm', railBot.x + ROW1, (railBot.y + railTop.y) / 2, true);
 
     // Dvere 55x110 cm (kotovane v pohledu)
-    var doorX = -hw + CONFIG.DOOR_W / 2 + CONFIG.DOOR_OFFSET_X + 0.15;
+    var doorX = hx - hw + CONFIG.DOOR_W / 2 + CONFIG.DOOR_OFFSET_X + 0.15;
     var doorBot = ws(doorX, CONFIG.H1, divZ);
     var doorTop = ws(doorX, CONFIG.H1 + CONFIG.DOOR_H, divZ);
     drawAreaLabel('dvere 55x110', doorBot.x, (doorBot.y + doorTop.y) / 2, null);
 
     // Okno predni steny
     var doorRE = doorX + CONFIG.DOOR_W / 2;
-    var winCX = doorRE + (hw - doorRE) / 2;
+    var winCX = doorRE + (hx + hw - doorRE) / 2;
     var winCY = CONFIG.H1 + (CONFIG.H - CONFIG.H1) / 2;
     var winP = ws(winCX, winCY, divZ);
     drawAreaLabel('okno 50x45', winP.x, winP.y, null);
@@ -1994,15 +2031,15 @@ function drawDimensions(view) {
   else if (view === 'side') {
     // Kamera na +X, screen X = -Z (predni vlevo, zadni vpravo? nebo naopak)
     // Musime pouzit ws a zjistit skutecne screen pozice
-    var frontBot = ws(hw, 0, -hd);
-    var backBot = ws(hw, 0, hd);
-    var frontMid = ws(hw, CONFIG.H1, -hd);
-    var backMid = ws(hw, CONFIG.H1, hd);
-    var frontTop = ws(hw, CONFIG.H, -hd);
-    var backTop = ws(hw, CONFIG.H, hd);
-    var backPeak = ws(hw, CONFIG.H + CONFIG.ROOF_PEAK, hd);
-    var divBot = ws(hw, 0, divZ);
-    var divMid = ws(hw, CONFIG.H1, divZ);
+    var frontBot = ws(hx+hw, 0, -hd);
+    var backBot = ws(hx+hw, 0, hd);
+    var frontMid = ws(hx+hw, CONFIG.H1, -hd);
+    var backMid = ws(hx+hw, CONFIG.H1, hd);
+    var frontTop = ws(hx+hw, CONFIG.H, -hd);
+    var backTop = ws(hx+hw, CONFIG.H, hd);
+    var backPeak = ws(hx+hw, CONFIG.H + CONFIG.ROOF_PEAK, hd);
+    var divBot = ws(hx+hw, 0, divZ);
+    var divMid = ws(hx+hw, CONFIG.H1, divZ);
 
     // Zjistime ktery je screen vlevo
     var leftBot = frontBot.x < backBot.x ? frontBot : backBot;
@@ -2042,7 +2079,7 @@ function drawDimensions(view) {
     drawDimText('300 cm', leftBot.x - ROW2, (leftBot.y + leftTop.y) / 2, true);
 
     // Hreben +45 cm
-    var leftPeak = frontBot.x < backBot.x ? ws(hw, CONFIG.H + CONFIG.ROOF_PEAK, -hd) : backPeak;
+    var leftPeak = frontBot.x < backBot.x ? ws(hx+hw, CONFIG.H + CONFIG.ROOF_PEAK, -hd) : backPeak;
     // Hreben je vzadu, takze pouzijeme backTop a backPeak
     dimLineV(backTop, backPeak, backTop.x, backPeak.x, Math.max(backTop.x, backPeak.x) + ROW1);
     drawDimText('+45 cm', Math.max(backTop.x, backPeak.x) + ROW1, (backTop.y + backPeak.y) / 2, true);
@@ -2054,14 +2091,14 @@ function drawDimensions(view) {
 
   // ---- REZ ----
   else if (view === 'section') {
-    var frontBot = ws(0, 0, -hd);
-    var backBot = ws(0, 0, hd);
-    var frontMid = ws(0, CONFIG.H1, -hd);
-    var backMid = ws(0, CONFIG.H1, hd);
-    var frontTop = ws(0, CONFIG.H, -hd);
-    var backTop = ws(0, CONFIG.H, hd);
-    var backPeak = ws(0, CONFIG.H + CONFIG.ROOF_PEAK, hd);
-    var divBot = ws(0, 0, divZ);
+    var frontBot = ws(hx, 0, -hd);
+    var backBot = ws(hx, 0, hd);
+    var frontMid = ws(hx, CONFIG.H1, -hd);
+    var backMid = ws(hx, CONFIG.H1, hd);
+    var frontTop = ws(hx, CONFIG.H, -hd);
+    var backTop = ws(hx, CONFIG.H, hd);
+    var backPeak = ws(hx, CONFIG.H + CONFIG.ROOF_PEAK, hd);
+    var divBot = ws(hx, 0, divZ);
 
     var leftBot = frontBot.x < backBot.x ? frontBot : backBot;
     var rightBot = frontBot.x < backBot.x ? backBot : frontBot;
@@ -2141,6 +2178,16 @@ function switchView(view) {
     if (c.name !== 'dimensions' && c.parent && c.parent.name !== 'dimensions') {
       c.visible = true;
     }
+  });
+
+  // Vedlejší assety (pískoviště, houpačka, okolí) — jen v 3D pohledu
+  // Sandbox je v playhouse group
+  playhouse.traverse(c => {
+    if (c.name === 'sandbox') c.visible = is3D;
+  });
+  // Swing a surroundings jsou přímo ve scene
+  scene.traverse(c => {
+    if (c.name === 'swing' || c.name === 'surroundings') c.visible = is3D;
   });
 
   // Stíny jen v 3D pohledu — v technických výkresech ruší
@@ -2387,6 +2434,9 @@ const walkSpeed = 0.04;
 const walkClimbSpeed = 0.025;
 const walkKeys = { w: false, a: false, s: false, d: false };
 let walkPointerLocked = false;
+let walkCamDist = 2.5;  // 0 = first-person, 2.5 = third-person
+const WALK_CAM_DIST_MAX = 4.0;
+const WALK_FP_THRESHOLD = 0.15;  // below this → first-person mode
 
 // Physics state
 const WALK_GRAVITY = 0.006;
@@ -2403,20 +2453,12 @@ const CHAR_LEG_H = 0.45;
 const CHAR_ARM_R = 0.04;
 const CHAR_ARM_H = 0.35;
 
-// Ladder geometry (must match ladder.js)
-function getLadderInfo() {
-  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
-  const ox = CONFIG.HOUSE_X;
-  const projX = 1.0;
-  const ladderZ = -hd + CONFIG.TD * 0.5;
-  return {
-    bottomX: ox + hw + projX,
-    bottomY: 0,
-    topX: ox + hw,
-    topY: CONFIG.H1,
-    z: ladderZ,
-    grabRadius: 0.5, // how close you need to be to grab on
-  };
+function isOnStairs(px, pz) {
+  const sx1 = CONFIG.HOUSE_X + 0.93;
+  const sx2 = CONFIG.HOUSE_X + 1.55 + 0.05; // Mírná rezerva pro okraj
+  const sz1 = -CONFIG.D / 2 - CONFIG.STAIRS_RUN;
+  const sz2 = -CONFIG.D / 2;
+  return px >= sx1 && px <= sx2 && pz >= sz1 && pz <= sz2;
 }
 
 function createCharacter() {
@@ -2510,6 +2552,15 @@ function getFloorHeight(px, pz, currentY) {
   const hw = CONFIG.W / 2;
   const hd = CONFIG.D / 2;
 
+  if (isOnStairs(px, pz)) {
+    const sz1 = -hd - CONFIG.STAIRS_RUN;
+    const sz2 = -hd;
+    // Pramp height linearly interpolates from 0 to H1
+    let t = (pz - sz1) / (sz2 - sz1);
+    t = Math.max(0, Math.min(1, t));
+    return t * CONFIG.H1;
+  }
+
   // If character is above H1 level and on the 2nd floor footprint → floor2
   if (currentY >= CONFIG.H1 - 0.1 && isOnFloor2(px, pz)) {
     return CONFIG.H1;
@@ -2523,6 +2574,7 @@ function enterWalkMode() {
   walkModeOn = true;
   walkState = 'ground';
   walkVelY = 0;
+  walkCamDist = 2.5;
 
   if (!walkChar) walkChar = createCharacter();
   scene.add(walkChar);
@@ -2539,7 +2591,6 @@ function enterWalkMode() {
   document.getElementById('walk-hint').style.display = 'block';
   document.getElementById('controls-hint').style.display = 'none';
   document.getElementById('view-presets').style.display = 'none';
-  document.getElementById('toggles').style.display = 'none';
 }
 
 function exitWalkMode() {
@@ -2575,16 +2626,29 @@ function updateWalkCamera() {
     walkChar.rotation.z = 0;
   }
 
-  const camDist = 2.5;
-  const camHeight = 1.4;
-  const cx = walkChar.position.x - Math.sin(walkYaw) * camDist * Math.cos(walkPitch);
-  const cy = walkChar.position.y + camHeight + Math.sin(walkPitch) * camDist * 0.5;
-  const cz = walkChar.position.z - Math.cos(walkYaw) * camDist * Math.cos(walkPitch);
+  const firstPerson = walkCamDist < WALK_FP_THRESHOLD;
+  walkChar.visible = !firstPerson;
 
-  perspCamera.position.set(cx, cy, cz);
+  if (firstPerson) {
+    // First-person: camera at eye level, look forward with pitch
+    const eyeY = walkChar.position.y + CHAR_HEIGHT * 0.9;
+    perspCamera.position.set(walkChar.position.x, eyeY, walkChar.position.z);
+    const lookDist = 5;
+    perspCamera.lookAt(
+      walkChar.position.x + Math.sin(walkYaw) * lookDist * Math.cos(walkPitch),
+      eyeY + Math.sin(walkPitch) * lookDist,
+      walkChar.position.z + Math.cos(walkYaw) * lookDist * Math.cos(walkPitch)
+    );
+  } else {
+    const camHeight = 1.4;
+    const cx = walkChar.position.x - Math.sin(walkYaw) * walkCamDist * Math.cos(walkPitch);
+    const cy = walkChar.position.y + camHeight + Math.sin(walkPitch) * walkCamDist * 0.5;
+    const cz = walkChar.position.z - Math.cos(walkYaw) * walkCamDist * Math.cos(walkPitch);
+    perspCamera.position.set(cx, cy, cz);
+    const lookY = walkChar.position.y + CHAR_HEIGHT * 0.85;
+    perspCamera.lookAt(walkChar.position.x, lookY, walkChar.position.z);
+  }
 
-  const lookY = walkChar.position.y + CHAR_HEIGHT * 0.85;
-  perspCamera.lookAt(walkChar.position.x, lookY, walkChar.position.z);
   activeCamera = perspCamera;
 }
 
@@ -2598,59 +2662,11 @@ function updateWalkMovement() {
   if (walkKeys.d) moveX -= 1;
 
   const isMoving = moveX !== 0 || moveZ !== 0;
-  const ladder = getLadderInfo();
+
+  // Current position — must be declared before all state checks
   const px = walkChar.position.x;
-  const py = walkChar.position.y;
   const pz = walkChar.position.z;
-
-  // Distance to ladder (in XZ plane)
-  const distToLadderBase = Math.sqrt(
-    Math.pow(px - ladder.bottomX, 2) + Math.pow(pz - ladder.z, 2)
-  );
-  const distToLadderTop = Math.sqrt(
-    Math.pow(px - ladder.topX, 2) + Math.pow(pz - ladder.z, 2)
-  );
-
-  // ---- STATE: CLIMBING ----
-  if (walkState === 'climbing') {
-    let climbDir = 0;
-    if (walkKeys.w) climbDir += 1;  // up
-    if (walkKeys.s) climbDir -= 1;  // down
-
-    if (climbDir !== 0) {
-      // Progress along ladder (0 = bottom, 1 = top)
-      const t = (py - ladder.bottomY) / (ladder.topY - ladder.bottomY);
-      const newT = Math.max(0, Math.min(1, t + climbDir * walkClimbSpeed / (ladder.topY - ladder.bottomY)));
-
-      // Interpolate position along ladder
-      walkChar.position.x = ladder.bottomX + (ladder.topX - ladder.bottomX) * newT;
-      walkChar.position.y = ladder.bottomY + (ladder.topY - ladder.bottomY) * newT;
-
-      // Reached top → step onto floor 2
-      if (newT >= 1.0) {
-        walkState = 'floor2';
-        walkChar.position.y = CONFIG.H1;
-        walkChar.position.x = ladder.topX - 0.3; // step inward
-        walkChar.rotation.x = 0;
-        walkChar.rotation.z = 0;
-      }
-      // Reached bottom → back to ground
-      if (newT <= 0.0) {
-        walkState = 'ground';
-        walkChar.position.y = 0;
-        walkChar.position.x = ladder.bottomX;
-        walkChar.rotation.x = 0;
-        walkChar.rotation.z = 0;
-      }
-    }
-
-    // Face the wall while climbing
-    walkChar.rotation.y = -Math.PI / 2; // face -X (towards the wall)
-
-    animateCharacter(climbDir !== 0);
-    updateWalkCamera();
-    return;
-  }
+  const py = walkChar.position.y;
 
   // ---- STATE: FALLING ----
   if (walkState === 'falling') {
@@ -2682,27 +2698,6 @@ function updateWalkMovement() {
     return;
   }
 
-  // ---- STATE: GROUND or FLOOR2 ----
-
-  // Check if near ladder and can grab on
-  if (walkState === 'ground' && walkKeys.w && distToLadderBase < ladder.grabRadius && py < 0.3) {
-    // Grab the ladder from the bottom
-    walkState = 'climbing';
-    walkChar.position.set(ladder.bottomX, ladder.bottomY, ladder.z);
-    animateCharacter(true);
-    updateWalkCamera();
-    return;
-  }
-
-  if (walkState === 'floor2' && walkKeys.s && distToLadderTop < ladder.grabRadius) {
-    // Grab the ladder from the top
-    walkState = 'climbing';
-    walkChar.position.set(ladder.topX, ladder.topY, ladder.z);
-    animateCharacter(true);
-    updateWalkCamera();
-    return;
-  }
-
   if (isMoving) {
     const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
     moveX /= len; moveZ /= len;
@@ -2713,7 +2708,7 @@ function updateWalkMovement() {
 
     // Check if still on current floor after move
     if (walkState === 'floor2') {
-      if (!isOnFloor2(newX, newZ)) {
+      if (!isOnFloor2(newX, newZ) && !isOnStairs(newX, newZ)) {
         // Walked off the edge → fall!
         walkState = 'falling';
         walkVelY = 0;
@@ -2722,13 +2717,21 @@ function updateWalkMovement() {
       } else {
         walkChar.position.x = newX;
         walkChar.position.z = newZ;
-        walkChar.position.y = CONFIG.H1;
+        const newY = getFloorHeight(newX, newZ, walkChar.position.y);
+        walkChar.position.y = newY;
+        // Transition back to ground when descending stairs to ground level
+        if (newY < CONFIG.H1 - 0.1) {
+          walkState = 'ground';
+        }
       }
     } else {
-      // Ground — free movement
+      // Ground — free movement or stairs
       walkChar.position.x = newX;
       walkChar.position.z = newZ;
-      walkChar.position.y = 0;
+      walkChar.position.y = getFloorHeight(newX, newZ, walkChar.position.y);
+      if (walkChar.position.y >= CONFIG.H1 - 0.1) {
+        walkState = 'floor2';
+      }
     }
 
     walkChar.position.x = Math.max(-10, Math.min(10, walkChar.position.x));
@@ -2773,8 +2776,18 @@ document.addEventListener('mousemove', e => {
   if (!walkModeOn || !walkPointerLocked) return;
   walkYaw -= e.movementX * 0.003;
   walkPitch -= e.movementY * 0.003;
-  walkPitch = Math.max(-0.3, Math.min(1.0, walkPitch));
+  const firstPerson = walkCamDist < WALK_FP_THRESHOLD;
+  const pitchMin = firstPerson ? -1.4 : -0.3;
+  const pitchMax = firstPerson ? 1.4 : 1.0;
+  walkPitch = Math.max(pitchMin, Math.min(pitchMax, walkPitch));
 });
+
+renderer.domElement.addEventListener('wheel', e => {
+  if (!walkModeOn) return;
+  e.preventDefault();
+  walkCamDist += e.deltaY * 0.005;
+  walkCamDist = Math.max(0, Math.min(WALK_CAM_DIST_MAX, walkCamDist));
+}, { passive: false });
 
 // ============================================================
 // 3D Object Picker — raycasting + tooltip
@@ -2938,7 +2951,7 @@ function buildScene() {
   playhouse.add(createRoof());
   playhouse.add(createRailing());
   playhouse.add(createSlide());
-  playhouse.add(createLadder());
+  playhouse.add(createStairs());
   playhouse.add(createSandbox());
   scene.add(createSurroundings());
   scene.add(createSwing());

@@ -243,16 +243,17 @@ function drawDimensions(view) {
   }
 
   var hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+  var hx = CONFIG.HOUSE_X;  // world X offset domečku
   var divZ = CONFIG.divZ;
 
   // ---- PUDORYS 1. PATRO ----
   if (view === 'floor1') {
     // Kamera je nad domem, přední strana (-Z) je nahoře (malé screen Y),
     // zadní strana (+Z) je dole (velké screen Y).
-    var tl = ws(-hw, 0, hd);   // screen dolů-vlevo (zadní-levý)
-    var tr = ws(hw, 0, hd);    // screen dolů-vpravo (zadní-pravý)
-    var bl = ws(-hw, 0, -hd);  // screen nahoru-vlevo (přední-levý)
-    var br = ws(hw, 0, -hd);   // screen nahoru-vpravo (přední-pravý)
+    var tl = ws(hx-hw, 0, hd);   // screen dolů-vlevo (zadní-levý)
+    var tr = ws(hx+hw, 0, hd);    // screen dolů-vpravo (zadní-pravý)
+    var bl = ws(hx-hw, 0, -hd);  // screen nahoru-vlevo (přední-levý)
+    var br = ws(hx+hw, 0, -hd);   // screen nahoru-vpravo (přední-pravý)
 
     // Sirka 310 cm — pod zadní hranou budovy (mimo budovu dole)
     dimLineH(bl, br, tl.y, tr.y, tl.y + ROW2);
@@ -263,17 +264,17 @@ function drawDimensions(view) {
     drawDimText('242 cm', br.x + ROW2, (br.y + tr.y) / 2, true);
 
     // Popisek
-    drawAreaLabel('PRIZEMI — otevreno vpredu', (tl.x + br.x) / 2, (tl.y + bl.y) / 2, null);
+    drawAreaLabel('PRIZEMI — otevreno vpredu', (tl.x + tr.x) / 2, (tl.y + bl.y) / 2, null);
   }
 
   // ---- PUDORYS 2. PATRO ----
   else if (view === 'floor2') {
-    var tl = ws(-hw, 0, hd);
-    var tr = ws(hw, 0, hd);
-    var bl = ws(-hw, 0, -hd);
-    var br = ws(hw, 0, -hd);
-    var divR = ws(hw, 0, divZ);   // delici cara vpravo
-    var divL = ws(-hw, 0, divZ);  // delici cara vlevo
+    var tl = ws(hx-hw, 0, hd);
+    var tr = ws(hx+hw, 0, hd);
+    var bl = ws(hx-hw, 0, -hd);
+    var br = ws(hx+hw, 0, -hd);
+    var divR = ws(hx+hw, 0, divZ);   // delici cara vpravo
+    var divL = ws(hx-hw, 0, divZ);  // delici cara vlevo
 
     // Sirka 310 cm — pod zadní hranou budovy (mimo budovu dole)
     dimLineH(bl, br, tl.y, tr.y, tl.y + ROW2);
@@ -298,11 +299,11 @@ function drawDimensions(view) {
 
   // ---- NARYS ZEPREDU ----
   else if (view === 'front') {
-    var bl = ws(-hw, 0, -hd);
-    var br = ws(hw, 0, -hd);
-    var tlMid = ws(-hw, CONFIG.H1, -hd);
-    var tlTop = ws(-hw, CONFIG.H, -hd);
-    var tlPeak = ws(-hw, CONFIG.H + CONFIG.ROOF_PEAK, -hd);
+    var bl = ws(hx-hw, 0, -hd);
+    var br = ws(hx+hw, 0, -hd);
+    var tlMid = ws(hx-hw, CONFIG.H1, -hd);
+    var tlTop = ws(hx-hw, CONFIG.H, -hd);
+    var tlPeak = ws(hx-hw, CONFIG.H + CONFIG.ROOF_PEAK, -hd);
 
     // Sirka 310 cm (dole)
     dimLineH(bl, br, bl.y, br.y, bl.y + ROW1);
@@ -325,20 +326,20 @@ function drawDimensions(view) {
     drawDimText('+45 cm', tlTop.x - ROW2, (tlTop.y + tlPeak.y) / 2, true);
 
     // Zabradli 90 cm (vpravo, rada 1)
-    var railBot = ws(hw, CONFIG.H1, -hd);
-    var railTop = ws(hw, CONFIG.H1 + CONFIG.RAIL_H, -hd);
+    var railBot = ws(hx+hw, CONFIG.H1, -hd);
+    var railTop = ws(hx+hw, CONFIG.H1 + CONFIG.RAIL_H, -hd);
     dimLineV(railBot, railTop, railBot.x, railTop.x, railBot.x + ROW1);
     drawDimText('90 cm', railBot.x + ROW1, (railBot.y + railTop.y) / 2, true);
 
     // Dvere 55x110 cm (kotovane v pohledu)
-    var doorX = -hw + CONFIG.DOOR_W / 2 + CONFIG.DOOR_OFFSET_X + 0.15;
+    var doorX = hx - hw + CONFIG.DOOR_W / 2 + CONFIG.DOOR_OFFSET_X + 0.15;
     var doorBot = ws(doorX, CONFIG.H1, divZ);
     var doorTop = ws(doorX, CONFIG.H1 + CONFIG.DOOR_H, divZ);
     drawAreaLabel('dvere 55x110', doorBot.x, (doorBot.y + doorTop.y) / 2, null);
 
     // Okno predni steny
     var doorRE = doorX + CONFIG.DOOR_W / 2;
-    var winCX = doorRE + (hw - doorRE) / 2;
+    var winCX = doorRE + (hx + hw - doorRE) / 2;
     var winCY = CONFIG.H1 + (CONFIG.H - CONFIG.H1) / 2;
     var winP = ws(winCX, winCY, divZ);
     drawAreaLabel('okno 50x45', winP.x, winP.y, null);
@@ -352,15 +353,15 @@ function drawDimensions(view) {
   else if (view === 'side') {
     // Kamera na +X, screen X = -Z (predni vlevo, zadni vpravo? nebo naopak)
     // Musime pouzit ws a zjistit skutecne screen pozice
-    var frontBot = ws(hw, 0, -hd);
-    var backBot = ws(hw, 0, hd);
-    var frontMid = ws(hw, CONFIG.H1, -hd);
-    var backMid = ws(hw, CONFIG.H1, hd);
-    var frontTop = ws(hw, CONFIG.H, -hd);
-    var backTop = ws(hw, CONFIG.H, hd);
-    var backPeak = ws(hw, CONFIG.H + CONFIG.ROOF_PEAK, hd);
-    var divBot = ws(hw, 0, divZ);
-    var divMid = ws(hw, CONFIG.H1, divZ);
+    var frontBot = ws(hx+hw, 0, -hd);
+    var backBot = ws(hx+hw, 0, hd);
+    var frontMid = ws(hx+hw, CONFIG.H1, -hd);
+    var backMid = ws(hx+hw, CONFIG.H1, hd);
+    var frontTop = ws(hx+hw, CONFIG.H, -hd);
+    var backTop = ws(hx+hw, CONFIG.H, hd);
+    var backPeak = ws(hx+hw, CONFIG.H + CONFIG.ROOF_PEAK, hd);
+    var divBot = ws(hx+hw, 0, divZ);
+    var divMid = ws(hx+hw, CONFIG.H1, divZ);
 
     // Zjistime ktery je screen vlevo
     var leftBot = frontBot.x < backBot.x ? frontBot : backBot;
@@ -400,7 +401,7 @@ function drawDimensions(view) {
     drawDimText('300 cm', leftBot.x - ROW2, (leftBot.y + leftTop.y) / 2, true);
 
     // Hreben +45 cm
-    var leftPeak = frontBot.x < backBot.x ? ws(hw, CONFIG.H + CONFIG.ROOF_PEAK, -hd) : backPeak;
+    var leftPeak = frontBot.x < backBot.x ? ws(hx+hw, CONFIG.H + CONFIG.ROOF_PEAK, -hd) : backPeak;
     // Hreben je vzadu, takze pouzijeme backTop a backPeak
     dimLineV(backTop, backPeak, backTop.x, backPeak.x, Math.max(backTop.x, backPeak.x) + ROW1);
     drawDimText('+45 cm', Math.max(backTop.x, backPeak.x) + ROW1, (backTop.y + backPeak.y) / 2, true);
@@ -412,14 +413,14 @@ function drawDimensions(view) {
 
   // ---- REZ ----
   else if (view === 'section') {
-    var frontBot = ws(0, 0, -hd);
-    var backBot = ws(0, 0, hd);
-    var frontMid = ws(0, CONFIG.H1, -hd);
-    var backMid = ws(0, CONFIG.H1, hd);
-    var frontTop = ws(0, CONFIG.H, -hd);
-    var backTop = ws(0, CONFIG.H, hd);
-    var backPeak = ws(0, CONFIG.H + CONFIG.ROOF_PEAK, hd);
-    var divBot = ws(0, 0, divZ);
+    var frontBot = ws(hx, 0, -hd);
+    var backBot = ws(hx, 0, hd);
+    var frontMid = ws(hx, CONFIG.H1, -hd);
+    var backMid = ws(hx, CONFIG.H1, hd);
+    var frontTop = ws(hx, CONFIG.H, -hd);
+    var backTop = ws(hx, CONFIG.H, hd);
+    var backPeak = ws(hx, CONFIG.H + CONFIG.ROOF_PEAK, hd);
+    var divBot = ws(hx, 0, divZ);
 
     var leftBot = frontBot.x < backBot.x ? frontBot : backBot;
     var rightBot = frontBot.x < backBot.x ? backBot : frontBot;

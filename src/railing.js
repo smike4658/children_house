@@ -45,6 +45,14 @@ function createRailing() {
     addPost(xLeft, z, RH);
   }
 
+  // Pravé zábradlí (+X strana terasy) - místo původního žebříku
+  const xRight = hw;
+  const numRight = 3;
+  for (let i = 0; i <= numRight; i++) {
+    const z = zFront + CONFIG.TD / numRight * i;
+    addPost(xRight, z, RH);
+  }
+
   // Vodorovné latě (4 nad sebou)
   const gapY = (RH - numSlats * slatH) / 4; // 4 mezery pro 4 latě, horní lícuje s výškou sloupků
   const gapStartX = -hw + CONFIG.W / numFront; // Druhý sloupek (x: -0.93)
@@ -53,16 +61,17 @@ function createRailing() {
     const y = baseY + gapY + slatH / 2 + i * (slatH + gapY);
 
     // Přední latě (připevněné zepředu)
-    if (i === numSlats - 1) {
-      // Nejvyšší lať je vcelku přes celou šířku
-      addSlat(-hw - RT / 2 - slatT, zFront, hw + RT / 2 + slatT, zFront, y, 0, -(RT / 2 + slatT / 2));
-    } else {
-      // Spodní 3 latě začínají až od druhého sloupku, aby byl volný průchod ke skluzavce
-      addSlat(gapStartX - RT / 2, zFront, hw + RT / 2 + slatT, zFront, y, 0, -(RT / 2 + slatT / 2));
-    }
+    // Všechny latě jdou pouze mezi sloupky x=-0.93 a x=0.93
+    // Vznikne tak volný průchod pro klouzačku (vlevo -1.55 až -0.93) a schody (vpravo 0.93 až 1.55)
+    // gapStartX je -0.93. Pravý konec bude -gapStartX (tedy +0.93).
+    const gapEndX = -gapStartX;
+    addSlat(gapStartX - RT / 2, zFront, gapEndX + RT / 2 + slatT, zFront, y, 0, -(RT / 2 + slatT / 2));
 
     // Levé latě (připevněné zleva)
     addSlat(xLeft, zFront - RT / 2, xLeft, divZ, y, -(RT / 2 + slatT / 2), 0);
+
+    // Pravé latě (připevněné zprava)
+    addSlat(xRight, zFront - RT / 2, xRight, divZ, y, (RT / 2 + slatT / 2), 0);
   }
 
   return g;

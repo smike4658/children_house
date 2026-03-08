@@ -20,7 +20,7 @@ function buildScene() {
   playhouse.add(createRoof());
   playhouse.add(createRailing());
   playhouse.add(createSlide());
-  playhouse.add(createLadder());
+  playhouse.add(createStairs());
   playhouse.add(createSandbox());
   scene.add(createSurroundings());
   scene.add(createSwing());

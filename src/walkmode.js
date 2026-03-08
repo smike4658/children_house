@@ -10,6 +10,9 @@ const walkSpeed = 0.04;
 const walkClimbSpeed = 0.025;
 const walkKeys = { w: false, a: false, s: false, d: false };
 let walkPointerLocked = false;
+let walkCamDist = 2.5;  // 0 = first-person, 2.5 = third-person
+const WALK_CAM_DIST_MAX = 4.0;
+const WALK_FP_THRESHOLD = 0.15;  // below this → first-person mode
 
 // Physics state
 const WALK_GRAVITY = 0.006;
@@ -26,20 +29,12 @@ const CHAR_LEG_H = 0.45;
 const CHAR_ARM_R = 0.04;
 const CHAR_ARM_H = 0.35;
 
-// Ladder geometry (must match ladder.js)
-function getLadderInfo() {
-  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
-  const ox = CONFIG.HOUSE_X;
-  const projX = 1.0;
-  const ladderZ = -hd + CONFIG.TD * 0.5;
-  return {
-    bottomX: ox + hw + projX,
-    bottomY: 0,
-    topX: ox + hw,
-    topY: CONFIG.H1,
-    z: ladderZ,
-    grabRadius: 0.5, // how close you need to be to grab on
-  };
+function isOnStairs(px, pz) {
+  const sx1 = CONFIG.HOUSE_X + 0.93;
+  const sx2 = CONFIG.HOUSE_X + 1.55 + 0.05; // Mírná rezerva pro okraj
+  const sz1 = -CONFIG.D / 2 - CONFIG.STAIRS_RUN;
+  const sz2 = -CONFIG.D / 2;
+  return px >= sx1 && px <= sx2 && pz >= sz1 && pz <= sz2;
 }
 
 function createCharacter() {
@@ -133,6 +128,15 @@ function getFloorHeight(px, pz, currentY) {
   const hw = CONFIG.W / 2;
   const hd = CONFIG.D / 2;
 
+  if (isOnStairs(px, pz)) {
+    const sz1 = -hd - CONFIG.STAIRS_RUN;
+    const sz2 = -hd;
+    // Pramp height linearly interpolates from 0 to H1
+    let t = (pz - sz1) / (sz2 - sz1);
+    t = Math.max(0, Math.min(1, t));
+    return t * CONFIG.H1;
+  }
+
   // If character is above H1 level and on the 2nd floor footprint → floor2
   if (currentY >= CONFIG.H1 - 0.1 && isOnFloor2(px, pz)) {
     return CONFIG.H1;
@@ -146,6 +150,7 @@ function enterWalkMode() {
   walkModeOn = true;
   walkState = 'ground';
   walkVelY = 0;
+  walkCamDist = 2.5;
 
   if (!walkChar) walkChar = createCharacter();
   scene.add(walkChar);
@@ -162,7 +167,6 @@ function enterWalkMode() {
   document.getElementById('walk-hint').style.display = 'block';
   document.getElementById('controls-hint').style.display = 'none';
   document.getElementById('view-presets').style.display = 'none';
-  document.getElementById('toggles').style.display = 'none';
 }
 
 function exitWalkMode() {
@@ -198,16 +202,29 @@ function updateWalkCamera() {
     walkChar.rotation.z = 0;
   }
 
-  const camDist = 2.5;
-  const camHeight = 1.4;
-  const cx = walkChar.position.x - Math.sin(walkYaw) * camDist * Math.cos(walkPitch);
-  const cy = walkChar.position.y + camHeight + Math.sin(walkPitch) * camDist * 0.5;
-  const cz = walkChar.position.z - Math.cos(walkYaw) * camDist * Math.cos(walkPitch);
+  const firstPerson = walkCamDist < WALK_FP_THRESHOLD;
+  walkChar.visible = !firstPerson;
 
-  perspCamera.position.set(cx, cy, cz);
+  if (firstPerson) {
+    // First-person: camera at eye level, look forward with pitch
+    const eyeY = walkChar.position.y + CHAR_HEIGHT * 0.9;
+    perspCamera.position.set(walkChar.position.x, eyeY, walkChar.position.z);
+    const lookDist = 5;
+    perspCamera.lookAt(
+      walkChar.position.x + Math.sin(walkYaw) * lookDist * Math.cos(walkPitch),
+      eyeY + Math.sin(walkPitch) * lookDist,
+      walkChar.position.z + Math.cos(walkYaw) * lookDist * Math.cos(walkPitch)
+    );
+  } else {
+    const camHeight = 1.4;
+    const cx = walkChar.position.x - Math.sin(walkYaw) * walkCamDist * Math.cos(walkPitch);
+    const cy = walkChar.position.y + camHeight + Math.sin(walkPitch) * walkCamDist * 0.5;
+    const cz = walkChar.position.z - Math.cos(walkYaw) * walkCamDist * Math.cos(walkPitch);
+    perspCamera.position.set(cx, cy, cz);
+    const lookY = walkChar.position.y + CHAR_HEIGHT * 0.85;
+    perspCamera.lookAt(walkChar.position.x, lookY, walkChar.position.z);
+  }
 
-  const lookY = walkChar.position.y + CHAR_HEIGHT * 0.85;
-  perspCamera.lookAt(walkChar.position.x, lookY, walkChar.position.z);
   activeCamera = perspCamera;
 }
 
@@ -221,59 +238,11 @@ function updateWalkMovement() {
   if (walkKeys.d) moveX -= 1;
 
   const isMoving = moveX !== 0 || moveZ !== 0;
-  const ladder = getLadderInfo();
+
+  // Current position — must be declared before all state checks
   const px = walkChar.position.x;
-  const py = walkChar.position.y;
   const pz = walkChar.position.z;
-
-  // Distance to ladder (in XZ plane)
-  const distToLadderBase = Math.sqrt(
-    Math.pow(px - ladder.bottomX, 2) + Math.pow(pz - ladder.z, 2)
-  );
-  const distToLadderTop = Math.sqrt(
-    Math.pow(px - ladder.topX, 2) + Math.pow(pz - ladder.z, 2)
-  );
-
-  // ---- STATE: CLIMBING ----
-  if (walkState === 'climbing') {
-    let climbDir = 0;
-    if (walkKeys.w) climbDir += 1;  // up
-    if (walkKeys.s) climbDir -= 1;  // down
-
-    if (climbDir !== 0) {
-      // Progress along ladder (0 = bottom, 1 = top)
-      const t = (py - ladder.bottomY) / (ladder.topY - ladder.bottomY);
-      const newT = Math.max(0, Math.min(1, t + climbDir * walkClimbSpeed / (ladder.topY - ladder.bottomY)));
-
-      // Interpolate position along ladder
-      walkChar.position.x = ladder.bottomX + (ladder.topX - ladder.bottomX) * newT;
-      walkChar.position.y = ladder.bottomY + (ladder.topY - ladder.bottomY) * newT;
-
-      // Reached top → step onto floor 2
-      if (newT >= 1.0) {
-        walkState = 'floor2';
-        walkChar.position.y = CONFIG.H1;
-        walkChar.position.x = ladder.topX - 0.3; // step inward
-        walkChar.rotation.x = 0;
-        walkChar.rotation.z = 0;
-      }
-      // Reached bottom → back to ground
-      if (newT <= 0.0) {
-        walkState = 'ground';
-        walkChar.position.y = 0;
-        walkChar.position.x = ladder.bottomX;
-        walkChar.rotation.x = 0;
-        walkChar.rotation.z = 0;
-      }
-    }
-
-    // Face the wall while climbing
-    walkChar.rotation.y = -Math.PI / 2; // face -X (towards the wall)
-
-    animateCharacter(climbDir !== 0);
-    updateWalkCamera();
-    return;
-  }
+  const py = walkChar.position.y;
 
   // ---- STATE: FALLING ----
   if (walkState === 'falling') {
@@ -305,27 +274,6 @@ function updateWalkMovement() {
     return;
   }
 
-  // ---- STATE: GROUND or FLOOR2 ----
-
-  // Check if near ladder and can grab on
-  if (walkState === 'ground' && walkKeys.w && distToLadderBase < ladder.grabRadius && py < 0.3) {
-    // Grab the ladder from the bottom
-    walkState = 'climbing';
-    walkChar.position.set(ladder.bottomX, ladder.bottomY, ladder.z);
-    animateCharacter(true);
-    updateWalkCamera();
-    return;
-  }
-
-  if (walkState === 'floor2' && walkKeys.s && distToLadderTop < ladder.grabRadius) {
-    // Grab the ladder from the top
-    walkState = 'climbing';
-    walkChar.position.set(ladder.topX, ladder.topY, ladder.z);
-    animateCharacter(true);
-    updateWalkCamera();
-    return;
-  }
-
   if (isMoving) {
     const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
     moveX /= len; moveZ /= len;
@@ -336,7 +284,7 @@ function updateWalkMovement() {
 
     // Check if still on current floor after move
     if (walkState === 'floor2') {
-      if (!isOnFloor2(newX, newZ)) {
+      if (!isOnFloor2(newX, newZ) && !isOnStairs(newX, newZ)) {
         // Walked off the edge → fall!
         walkState = 'falling';
         walkVelY = 0;
@@ -345,13 +293,21 @@ function updateWalkMovement() {
       } else {
         walkChar.position.x = newX;
         walkChar.position.z = newZ;
-        walkChar.position.y = CONFIG.H1;
+        const newY = getFloorHeight(newX, newZ, walkChar.position.y);
+        walkChar.position.y = newY;
+        // Transition back to ground when descending stairs to ground level
+        if (newY < CONFIG.H1 - 0.1) {
+          walkState = 'ground';
+        }
       }
     } else {
-      // Ground — free movement
+      // Ground — free movement or stairs
       walkChar.position.x = newX;
       walkChar.position.z = newZ;
-      walkChar.position.y = 0;
+      walkChar.position.y = getFloorHeight(newX, newZ, walkChar.position.y);
+      if (walkChar.position.y >= CONFIG.H1 - 0.1) {
+        walkState = 'floor2';
+      }
     }
 
     walkChar.position.x = Math.max(-10, Math.min(10, walkChar.position.x));
@@ -396,5 +352,15 @@ document.addEventListener('mousemove', e => {
   if (!walkModeOn || !walkPointerLocked) return;
   walkYaw -= e.movementX * 0.003;
   walkPitch -= e.movementY * 0.003;
-  walkPitch = Math.max(-0.3, Math.min(1.0, walkPitch));
+  const firstPerson = walkCamDist < WALK_FP_THRESHOLD;
+  const pitchMin = firstPerson ? -1.4 : -0.3;
+  const pitchMax = firstPerson ? 1.4 : 1.0;
+  walkPitch = Math.max(pitchMin, Math.min(pitchMax, walkPitch));
 });
+
+renderer.domElement.addEventListener('wheel', e => {
+  if (!walkModeOn) return;
+  e.preventDefault();
+  walkCamDist += e.deltaY * 0.005;
+  walkCamDist = Math.max(0, Math.min(WALK_CAM_DIST_MAX, walkCamDist));
+}, { passive: false });
