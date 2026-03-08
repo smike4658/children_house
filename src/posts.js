@@ -22,14 +22,6 @@ function createPosts() {
     g.add(m);
   });
 
-  // 1 střední sloupek (pouze přední terasa, zadní odstraněn)
-  [[-hd, H_front]].forEach(([z, h]) => {
-    const ph = h - FH;
-    const m = box(P * 0.85, ph, P * 0.85, MAT.posts);
-    m.position.set(0, FH + ph / 2, z);
-    g.add(m);
-  });
-
   // divZ = pozice přední stěny kabiny = -hd + CONFIG.TD
   const divZ = CONFIG.divZ;
   // 2 dělicí sloupky terasa/kabina, od H1 výš po H_cabin_front

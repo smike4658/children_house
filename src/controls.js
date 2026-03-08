@@ -24,7 +24,7 @@ renderer.domElement.addEventListener('mousedown', e => {
 renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
 window.addEventListener('mouseup', () => isDragging = false);
 window.addEventListener('mousemove', e => {
-  if (!isDragging || currentView !== '3d') return;
+  if (!isDragging || currentView !== '3d' || walkModeOn) return;
   const dx = e.clientX - lastMouse.x;
   const dy = e.clientY - lastMouse.y;
   lastMouse = { x: e.clientX, y: e.clientY };
@@ -47,7 +47,7 @@ window.addEventListener('mousemove', e => {
   perspCamera.lookAt(orbitTarget);
 });
 renderer.domElement.addEventListener('wheel', e => {
-  if (currentView !== '3d') return;
+  if (currentView !== '3d' || walkModeOn) return;
   spherical.radius *= (1 + e.deltaY * 0.001);
   spherical.radius = Math.max(1, Math.min(20, spherical.radius));
   _orbitPos.setFromSpherical(spherical).add(orbitTarget);

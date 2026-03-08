@@ -264,6 +264,27 @@
       display: none;
     }
 
+    /* Walk mode hint */
+    #walk-hint {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(26, 31, 22, 0.88);
+      border: 1px solid #5a6a4a;
+      border-radius: 5px;
+      padding: 8px 16px;
+      font-size: 12px;
+      color: #d4c9a8;
+      pointer-events: none;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    #walk-hint b {
+      color: #8a9a72;
+    }
+
     @media print {
       #ui {
         display: none;
@@ -353,16 +374,21 @@
       <div class="toggle-btn" id="toggle-wire">
         <div class="toggle-dot"></div>Drátový model
       </div>
-      <div class="toggle-btn" id="toggle-labels">
-        <div class="toggle-dot"></div>Popisky
-      </div>
       <div class="toggle-btn" id="toggle-dims">
         <div class="toggle-dot"></div>Kóty
+      </div>
+      <div class="toggle-btn" id="toggle-walk">
+        <div class="toggle-dot"></div>Procházka
       </div>
     </div>
 
     <!-- Print button (2D only) -->
     <button id="print-btn" onclick="window.print()">Tisk / Export</button>
+
+    <!-- Walk mode hint -->
+    <div id="walk-hint" style="display:none">
+      <b>WASD</b> — pohyb &nbsp;|&nbsp; <b>W/S u žebříku</b> — lezení nahoru/dolů &nbsp;|&nbsp; <b>Myš</b> — rozhlížení (klikni) &nbsp;|&nbsp; <b>Esc</b> — konec
+    </div>
 
     <!-- Kóty a popisky pro 2D pohledy -->
     <canvas id="dim-canvas"></canvas>

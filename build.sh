@@ -24,11 +24,11 @@ MODULES=(
   src/railing.js
   src/slide.js
   src/ladder.js
-  src/labels.js
   src/dimensions.js
   src/views.js
   src/controls.js
   src/ui.js
+  src/walkmode.js
   src/picker.js
   src/postprocessing.js
   src/main.js

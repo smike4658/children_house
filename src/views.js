@@ -5,6 +5,11 @@ let composer = null;
 const playhouse = new THREE.Group();
 
 function switchView(view) {
+  // Exit walk mode when switching views
+  if (walkModeOn) {
+    exitWalkMode();
+    document.getElementById('toggle-walk').classList.remove('on');
+  }
   currentView = view;
   document.querySelectorAll('.tab').forEach(t => {
     t.classList.toggle('active', t.dataset.view === view);
@@ -22,10 +27,20 @@ function switchView(view) {
 
   sectionPlane.constant = 1000; // default: no clipping
 
+  // Obnovit viditelnost všech objektů před přepnutím (kromě dimensions — ty řídí toggle)
+  playhouse.traverse(c => {
+    if (c.name !== 'dimensions' && c.parent && c.parent.name !== 'dimensions') {
+      c.visible = true;
+    }
+  });
+
+  // Stíny jen v 3D pohledu — v technických výkresech ruší
+  renderer.shadowMap.enabled = is3D;
+  dirLight.castShadow = is3D;
+  renderer.shadowMap.needsUpdate = true;
+
   if (view === '3d') {
     activeCamera = perspCamera;
-    // Show all
-    playhouse.traverse(c => { if (c.isMesh) c.visible = true; });
   } else if (view === 'floor1') {
     setupOrthoView(
       new THREE.Vector3(0, 10, 0),
@@ -33,37 +48,53 @@ function switchView(view) {
       -hw - pad, hw + pad, hd + pad, -hd - pad
     );
     // Zobrazit pouze 1. patro (y = 0 až H1)
-    // Kamera je na y=10, takže near=10-H1, far=10+0.1
-    orthoCamera.near = 10 - CONFIG.H1 - 0.05;
+    // Kamera je na y=10, near/far ořízne vše mimo rozsah Y 0..H1-0.01
+    orthoCamera.near = 10 - CONFIG.H1 + 0.01;
     orthoCamera.far = 10.15;
     orthoCamera.updateProjectionMatrix();
+    // Skrýt prvky 2. patra které by mohly prosakovat
+    playhouse.traverse(c => {
+      if (c.name === 'slide' || c.name === 'railing' || c.name === 'ladder') {
+        c.visible = false;
+      }
+    });
   } else if (view === 'floor2') {
     setupOrthoView(
       new THREE.Vector3(0, 10, 0),
       new THREE.Vector3(0, 0, 0),
       -hw - pad, hw + pad, hd + pad, -hd - pad
     );
-    // Zobrazit pouze 2. patro (y = H1 až H+ROOF_PEAK)
-    orthoCamera.near = 10 - CONFIG.H - CONFIG.ROOF_PEAK - 0.3;
-    orthoCamera.far = 10 - CONFIG.H1 + 0.15;
+    // Zobrazit pouze 2. patro (y = H1 až H) — bez střechy
+    orthoCamera.near = 10 - CONFIG.H - 0.05;
+    orthoCamera.far = 10 - CONFIG.H1 + 0.01;
     orthoCamera.updateProjectionMatrix();
+    // Skrýt střechu, patky a zem — v půdorysu 2. patra nechceme
+    playhouse.traverse(c => {
+      if (c.name === 'roof' || c.name === 'footings' || c.name === 'ground' || c.name === 'contactShadow') {
+        c.visible = false;
+      }
+    });
   } else if (view === 'front') {
+    // Frustum bounds jsou view-space offsety od pozice kamery (ne absolutní world Y)
+    const halfH = H / 2 + pad;
     setupOrthoView(
       new THREE.Vector3(0, H / 2, -10),
       new THREE.Vector3(0, H / 2, 0),
-      -hw - pad, hw + pad, H + pad, -pad
+      -hw - pad, hw + pad, halfH, -halfH
     );
   } else if (view === 'side') {
+    const halfH = H / 2 + pad;
     setupOrthoView(
       new THREE.Vector3(10, H / 2, 0),
       new THREE.Vector3(0, H / 2, 0),
-      -hd - pad, hd + pad, H + pad, -pad
+      -hd - pad, hd + pad, halfH, -halfH
     );
   } else if (view === 'section') {
+    const halfH = H / 2 + pad;
     setupOrthoView(
       new THREE.Vector3(10, H / 2, 0),
       new THREE.Vector3(0, H / 2, 0),
-      -hd - pad, hd + pad, H + pad, -pad
+      -hd - pad, hd + pad, halfH, -halfH
     );
     sectionPlane.constant = 0; // Clip at X=0
   }

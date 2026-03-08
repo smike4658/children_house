@@ -21,7 +21,6 @@ function buildScene() {
   playhouse.add(createRailing());
   playhouse.add(createSlide());
   playhouse.add(createLadder());
-  playhouse.add(createLabels());
   playhouse.add(createDimensions());
 
   // Enable shadows and apply clipping plane to playhouse meshes
@@ -72,6 +71,8 @@ const axisCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 10);
 // ============================================================
 function animate() {
   requestAnimationFrame(animate);
+  // Walk mode movement update
+  if (walkModeOn) updateWalkMovement();
   if (currentView === '3d' && composer && !composerFailed) {
     composer.passes[0].camera = activeCamera;
     try { composer.render(); } catch (e) { composerFailed = true; renderer.render(scene, activeCamera); }

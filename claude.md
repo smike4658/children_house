@@ -18,32 +18,32 @@ patkách. Stěny z dřevěných palubek (horizontální obklad). Pultová střec
 - Výška stropu 150 cm (pro děti cca 3–8 let)
 - Zadní stěna (+Z): plná, palubky celá výška
 - Pravá stěna (+X): plná, palubky celá výška
-- Levá stěna (-X): OTEVŘENÁ — žádná stěna, volný přístup
+- Levá stěna (-X): plná, palubky celá výška
 - Přední strana (-Z): OTEVŘENÁ — žádná stěna, volný přístup
 - Podlaha: dřevěné palubky/prkna na trámech
 - Účel: herní prostor, pískoviště, stoleček
 
 **2. patro (150–300 cm):**
-- Přístup: po žebříku z levé strany (zvenku)
+- Přístup: po žebříku z pravé strany (+X, zvenku)
 - Kabina (zadní část, 310×172 cm): uzavřená místnost s dveřmi a okny
   - Přední stěna kabiny: dveře (55×110 cm) + okno (40×35 cm)
-  - Pravá stěna: okno (50×40 cm) s křížovým rámem
+  - Levá stěna: okno (50×40 cm) s křížovým rámem
   - Zadní stěna: plná
-  - Levá stěna: OTEVŘENÁ
+  - Pravá stěna: plná
   - Střecha: pultová, pouze nad kabinou
 - Terasa (přední část, 310×70 cm): otevřená plocha
   - Zábradlí: vpředu a vlevo (výška 90 cm, příčle)
-  - Klouzačka: z pravé strany terasy dolů na trávník
-  - Žebřík: z levé strany zvenku
+  - Klouzačka: z levé strany terasy (-X) dolů na trávník
+  - Žebřík: z pravé strany (+X) zvenku
 
 **Klouzačka:**
-- Plastová, růžová, délka 260 cm
-- Začíná na pravé straně terasy (2. patro)
+- Plastová, žlutá, délka 260 cm
+- Začíná na levé straně terasy (-X, 2. patro)
 - Sjíždí dopředu směrem na trávník (-Z)
 
 **Žebřík:**
 - Dřevěný, 6 příček, šířka 45 cm
-- Opřený o levou stranu domečku zvenku
+- Opřený o pravou stranu domečku (+X) zvenku
 - Naklonění cca 75° (mírný sklon od svislice)
 - Vede na úroveň podlahy 2. patra (150 cm)
 
@@ -122,10 +122,10 @@ const CONFIG = {
   DOOR_OFFSET_X: 0.15,  // mírně vpravo od středu
 
   // Okna
-  SIDE_WIN_W: 0.50,     // okno v pravé stěně
+  SIDE_WIN_W: 0.50,     // okno v levé stěně (-X)
   SIDE_WIN_H: 0.40,
-  FRONT_WIN_W: 0.40,    // okno v přední stěně kabiny
-  FRONT_WIN_H: 0.35,
+  FRONT_WIN_W: 0.50,    // okno v přední stěně kabiny
+  FRONT_WIN_H: 0.45,
 
   // Klouzačka
   SLIDE_LEN: 2.60,
@@ -159,8 +159,8 @@ Výchozí kamera je na pozici `(6, 4, -6)`, dívá se na `(0, 1.5, 0)`.
 ```
 Z výchozího ISO pohledu:
 
-  Na obrazovce VPRAVO  →  svět +X  (pravá stěna, okno)
-  Na obrazovce VLEVO   →  svět -X  (levá stěna, žebřík)
+  Na obrazovce VPRAVO  →  svět +X  (pravá stěna, žebřík)
+  Na obrazovce VLEVO   →  svět -X  (levá stěna, okno, klouzačka)
   Na obrazovce VZADU   →  svět +Z  (zadní stěna)
   Na obrazovce VPŘEDU  →  svět -Z  (terasa, trávník, klouzačka)
   NAHORU               →  svět +Y  (výška)
@@ -181,14 +181,14 @@ Místo "otočená do domečku" piš "má směřovat do -Z (vpředu/trávník)".
            PŘEDNÍ STRANA (trávník, -Z)
     ┌─────────────────────────────────┐
     │       TERASA  310 × 70 cm       │  ← otevřená, zábradlí vpředu + vlevo
-    │  ŽEBŘÍK                         │  ← žebřík zvenku VLEVO
-    │  (vlevo)          KLOUZAČKA     │  ← klouzačka VPRAVO
+    │  KLOUZAČKA              ŽEBŘÍK   │  ← klouzačka VLEVO, žebřík VPRAVO
+    │  (vlevo, -X)          (vpravo)  │  ← žebřík zvenku VPRAVO (+X)
     ├─────────────────────────────────┤  ← přední stěna kabiny (dveře + okno)
     │                                 │
     │     KABINA / DOMEČEK            │
     │        310 × 172 cm            │
     │                                 │
-    │  LEVÁ = OTEVŘENÁ (bez stěny)   │  PRAVÁ = PLNÁ stěna (s oknem)
+    │  LEVÁ = PLNÁ stěna (s oknem)   │  PRAVÁ = PLNÁ stěna
     │                                 │
     └─────────────────────────────────┘
            ZADNÍ STRANA (+Z) = PLNÁ STĚNA
@@ -199,22 +199,23 @@ Místo "otočená do domečku" piš "má směřovat do -Z (vpředu/trávník)".
 | Stěna | 1. patro | 2. patro | Poznámka |
 |-------|----------|----------|----------|
 | Zadní (+Z) | plná | plná | palubky, celá výška |
-| Pravá (+X) | plná | plná s oknem 50×40 | okno cca uprostřed horní části |
-| Levá (-X) | otevřená | otevřená | bez stěn! |
+| Pravá (+X) | — | plná (kabina) | pouze 2. patro kabina |
+| Levá (-X) | plná | plná s oknem 50×40 (kabina) | okno s křížovým rámem |
 | Přední kabiny (divZ) | neexistuje (terasa) | dveře 55×110 + okno 40×35 | odděluje terasu od kabiny |
 | Přední (-Z) | neexistuje | neexistuje | terasa je otevřená vpředu |
 
 ## Nosná konstrukce — detail
 
 **Sloupky (svislé):**
-- 4 rohové sloupky 12×12 cm, celá výška (0 → 300 cm)
-- 2 střední sloupky (přední + zadní strana) ~10×10 cm, celá výška — uprostřed šířky
-- 2 dělicí sloupky (terasa/kabina) ~10×10 cm, od H1 do H2 — na pozici divZ = -D/2 + TD
+- 4 rohové sloupky 12×12 cm — přední do 240 cm (H1+RAIL_H), zadní do 300 cm (H)
+- 1 střední sloupek (přední strana, -Z) ~10×10 cm, výška 240 cm — uprostřed šířky
+- 2 dělicí sloupky (terasa/kabina) ~10×10 cm, od H1 do 345 cm (H+ROOF_PEAK) — na pozici divZ
 
-**Trámy (vodorovné):**
-- 4 horní rámy 7×7 cm po obvodu na výšce H2 (přední, zadní, levý, pravý)
-- 4 stropní nosníky (joists) pod podlahou 2. patra, rovnoměrně po hloubce
-- 3 podlahové nosníky pod podlahou 1. patra
+**Trámy (vodorovné) — AKTUÁLNÍ STAV:**
+- 4 stropní nosníky (joists) 7×7 cm pod podlahou 2. patra, přes celou šířku
+- 3 podlahové nosníky 7×7 cm pod podlahou 1. patra, přes celou šířku
+- CHYBÍ: horní rámy (vaznice) po obvodu — potřeba doplnit
+- CHYBÍ: rám přední stěny kabiny — potřeba doplnit
 
 **Podlahy:**
 - Přízemí: deska na úrovni 0 (tloušťka 5 cm)
@@ -276,7 +277,7 @@ const COLORS = {
   roof:     '#6B3A2A',  // střecha
   roofEdge: '#4A2818',  // okraj střechy
   railing:  '#D4A056',  // zábradlí
-  slide:    '#E85D75',  // klouzačka (růžová)
+  slide:    '#FFD700',  // klouzačka (žlutá)
   ladder:   '#5B8C3E',  // žebřík (zelená)
   frame:    '#f0e8d0',  // rámy oken/dveří
   concrete: '#999999',  // betonové patky
@@ -589,7 +590,7 @@ Pokud ani to nefunguje, implementuj fallback bez post-processingu (jen lepší s
 - Pravá stěna: segmenty kolem okna mají drobné mezery
 - Klouzačka: pozice a úhel potřebuje doladit (start přesně od hrany terasy 2. patra)
 - Žebřík: úhel naklonění nerealistický (měl by být cca 75°, víc svislý)
-- 1. patro: záměrně otevřené zepředu (-Z) a zleva (-X), má stěny pouze vzadu (+Z) a vpravo (+X)
+- 1. patro: záměrně otevřené zepředu (-Z), má stěny vzadu (+Z), vpravo (+X, jen sloupky) a vlevo (-X)
 - Střecha: přesah vpředu by měl končit přesně nad přední stěnou kabiny (divZ), ne nad terasou
 - Okno v pravé stěně: rám s křížem je na správné pozici, ale stěnové segmenty kolem mají švy
 - Dveřní rám: lintel (překlad) by měl vizuálně navazovat na okolní stěnu

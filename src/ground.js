@@ -5,16 +5,16 @@ function createGround() {
   const c = document.createElement('canvas');
   c.width = 512; c.height = 512;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#4a7a2e';
+  ctx.fillStyle = '#2E4F1B';
   ctx.fillRect(0, 0, 512, 512);
   for (let i = 0; i < 3000; i++) {
-    const g = 80 + Math.random() * 60;
-    ctx.fillStyle = `rgba(${30 + Math.random() * 40}, ${g}, ${20 + Math.random() * 20}, 0.15)`;
+    const g = 60 + Math.random() * 50; // Darker green hints
+    ctx.fillStyle = `rgba(${25 + Math.random() * 30}, ${g}, ${15 + Math.random() * 20}, 0.2)`;
     ctx.fillRect(Math.random() * 512, Math.random() * 512, 2 + Math.random() * 6, 2 + Math.random() * 6);
   }
-  ctx.strokeStyle = '#5a8a35';
+  ctx.strokeStyle = '#3E6625'; // Darker stroke
   for (let i = 0; i < 500; i++) {
-    ctx.globalAlpha = 0.08;
+    ctx.globalAlpha = 0.1;
     ctx.lineWidth = 0.5;
     const x = Math.random() * 512, y = Math.random() * 512;
     ctx.beginPath(); ctx.moveTo(x, y);

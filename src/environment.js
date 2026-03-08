@@ -2,30 +2,8 @@
 // Environment — HDRI + fallback
 // ============================================================
 function setupEnvironment() {
-  try {
-    if (typeof THREE.RGBELoader !== 'undefined') {
-      const pmrem = new THREE.PMREMGenerator(renderer);
-      pmrem.compileEquirectangularShader();
-      new THREE.RGBELoader()
-        .setDataType(THREE.UnsignedByteType)
-        .load(
-          'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/kloppenheim_06_puresky_1k.hdr',
-          (texture) => {
-            const envMap = pmrem.fromEquirectangular(texture).texture;
-            scene.environment = envMap;
-            scene.background = envMap;
-            texture.dispose();
-            pmrem.dispose();
-          },
-          undefined,
-          () => setupFallbackSky()
-        );
-    } else {
-      setupFallbackSky();
-    }
-  } catch (e) {
-    setupFallbackSky();
-  }
+  // Always use the fallback sky for better color control and no popping
+  setupFallbackSky();
 }
 
 function setupFallbackSky() {
@@ -33,10 +11,10 @@ function setupFallbackSky() {
   canvas.width = 1; canvas.height = 256;
   const ctx = canvas.getContext('2d');
   const grad = ctx.createLinearGradient(0, 0, 0, 256);
-  grad.addColorStop(0, '#4a90d9');
-  grad.addColorStop(0.4, '#87CEEB');
-  grad.addColorStop(0.75, '#b8daf0');
-  grad.addColorStop(1.0, '#e8dcc8');
+  grad.addColorStop(0, '#1E4A82');
+  grad.addColorStop(0.4, '#3A77B8');
+  grad.addColorStop(0.75, '#6AABC7');
+  grad.addColorStop(1.0, '#B3C3B9');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 1, 256);
   const tex = new THREE.CanvasTexture(canvas);

@@ -10,17 +10,21 @@ function createRailing() {
   const baseY = CONFIG.H1 + 0.06; // on top of 2nd floor
 
   function addPost(x, z, height) {
-    const m = box(RT, height, RT, MAT.railing);
+    const m = box(RT, height, RT, MAT.posts);
     m.position.set(x, baseY + height / 2, z);
     g.add(m);
   }
-  function addRail(x1, z1, x2, z2, y) {
+  const slatH = 0.12;
+  const slatT = 0.02;
+  const numSlats = 4;
+
+  function addSlat(x1, z1, x2, z2, y, offsetX, offsetZ) {
     const dx = x2 - x1, dz = z2 - z1;
     const len = Math.sqrt(dx * dx + dz * dz);
     const angle = Math.atan2(dz, dx);
-    const m = box(len, RT, RT, MAT.railing, false, false);
+    const m = box(len, slatH, slatT, MAT.railing, false, false);
     m.rotation.y = angle;
-    m.position.set((x1 + x2) / 2, y, (z1 + z2) / 2);
+    m.position.set((x1 + x2) / 2 + offsetX, y, (z1 + z2) / 2 + offsetZ);
     g.add(m);
   }
 
@@ -32,9 +36,6 @@ function createRailing() {
     const x = -hw + CONFIG.W / numFront * i;
     addPost(x, zFront, RH);
   }
-  // Top rail
-  addRail(-hw, zFront, hw, zFront, baseY + RH - RT / 2);
-  // Střední tyčka odstraněna
 
   // Levé zábradlí (-X strana terasy)
   const xLeft = -hw;
@@ -43,8 +44,26 @@ function createRailing() {
     const z = zFront + CONFIG.TD / numLeft * i;
     addPost(xLeft, z, RH);
   }
-  addRail(xLeft, zFront, xLeft, divZ, baseY + RH - RT / 2);
-  addRail(xLeft, zFront, xLeft, divZ, baseY + RH / 2);
+
+  // Vodorovné latě (4 nad sebou)
+  const gapY = (RH - numSlats * slatH) / 4; // 4 mezery pro 4 latě, horní lícuje s výškou sloupků
+  const gapStartX = -hw + CONFIG.W / numFront; // Druhý sloupek (x: -0.93)
+
+  for (let i = 0; i < numSlats; i++) {
+    const y = baseY + gapY + slatH / 2 + i * (slatH + gapY);
+
+    // Přední latě (připevněné zepředu)
+    if (i === numSlats - 1) {
+      // Nejvyšší lať je vcelku přes celou šířku
+      addSlat(-hw - RT / 2 - slatT, zFront, hw + RT / 2 + slatT, zFront, y, 0, -(RT / 2 + slatT / 2));
+    } else {
+      // Spodní 3 latě začínají až od druhého sloupku, aby byl volný průchod ke skluzavce
+      addSlat(gapStartX - RT / 2, zFront, hw + RT / 2 + slatT, zFront, y, 0, -(RT / 2 + slatT / 2));
+    }
+
+    // Levé latě (připevněné zleva)
+    addSlat(xLeft, zFront - RT / 2, xLeft, divZ, y, -(RT / 2 + slatT / 2), 0);
+  }
 
   return g;
 }

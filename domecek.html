@@ -264,6 +264,27 @@
       display: none;
     }
 
+    /* Walk mode hint */
+    #walk-hint {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(26, 31, 22, 0.88);
+      border: 1px solid #5a6a4a;
+      border-radius: 5px;
+      padding: 8px 16px;
+      font-size: 12px;
+      color: #d4c9a8;
+      pointer-events: none;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    #walk-hint b {
+      color: #8a9a72;
+    }
+
     @media print {
       #ui {
         display: none;
@@ -353,16 +374,21 @@
       <div class="toggle-btn" id="toggle-wire">
         <div class="toggle-dot"></div>Drátový model
       </div>
-      <div class="toggle-btn" id="toggle-labels">
-        <div class="toggle-dot"></div>Popisky
-      </div>
       <div class="toggle-btn" id="toggle-dims">
         <div class="toggle-dot"></div>Kóty
+      </div>
+      <div class="toggle-btn" id="toggle-walk">
+        <div class="toggle-dot"></div>Procházka
       </div>
     </div>
 
     <!-- Print button (2D only) -->
     <button id="print-btn" onclick="window.print()">Tisk / Export</button>
+
+    <!-- Walk mode hint -->
+    <div id="walk-hint" style="display:none">
+      <b>WASD</b> — pohyb &nbsp;|&nbsp; <b>W/S u žebříku</b> — lezení nahoru/dolů &nbsp;|&nbsp; <b>Myš</b> — rozhlížení (klikni) &nbsp;|&nbsp; <b>Esc</b> — konec
+    </div>
 
     <!-- Kóty a popisky pro 2D pohledy -->
     <canvas id="dim-canvas"></canvas>
@@ -396,13 +422,13 @@ const CONFIG = {
   BEAM: 0.07,
   ROOF_OVERHANG: 0.15,
   ROOF_PEAK: 0.45,
-  DOOR_W: 0.55,
-  DOOR_H: 1.10,
+  DOOR_W: 0.60,
+  DOOR_H: 1.25,
   DOOR_OFFSET_X: 0.15,
-  SIDE_WIN_W: 0.50,
-  SIDE_WIN_H: 0.40,
-  FRONT_WIN_W: 0.50,
-  FRONT_WIN_H: 0.45,
+  SIDE_WIN_W: 0.60,
+  SIDE_WIN_H: 0.50,
+  FRONT_WIN_W: 0.80,
+  FRONT_WIN_H: 0.50,
   SLIDE_LEN: 2.60,
   SLIDE_W: 0.42,
   LADDER_W: 0.45,
@@ -413,17 +439,17 @@ const CONFIG = {
 };
 
 const COLORS = {
-  posts: '#C4944A',
-  walls: '#B8860B',
-  floor: '#A0784C',
-  roof: '#6B3A2A',
-  roofEdge: '#4A2818',
-  railing: '#D4A056',
-  slide: '#FFD700',
-  ladder: '#5B8C3E',
-  frame: '#f0e8d0',
-  concrete: '#999999',
-  grass: '#4a7a2e',
+  posts: '#C88E4B',
+  walls: '#EAEBE6',
+  floor: '#C88E4B',
+  roof: '#7F878C',
+  roofEdge: '#C88E4B',
+  railing: '#EAEBE6',
+  slide: '#E2C222',
+  ladder: '#EAEBE6',
+  frame: '#B87A36',
+  concrete: '#A4A8A4',
+  grass: '#587A3E',
   sky: '#87CEEB',
   glass: '#a0d0e8',
 };
@@ -438,7 +464,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.VSMShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
+renderer.toneMappingExposure = 1.05;
 renderer.outputEncoding = THREE.sRGBEncoding;
 container.appendChild(renderer.domElement);
 
@@ -458,55 +484,33 @@ let currentView = '3d';
 // ============================================================
 // Lighting
 // ============================================================
-const ambientLight = new THREE.AmbientLight(0xfff8f0, 0.6);
+const ambientLight = new THREE.AmbientLight(0xddeeff, 0.4);
 scene.add(ambientLight);
 
-const dirLight = new THREE.DirectionalLight(0xffeedd, 1.2);
-dirLight.position.set(5, 10, -4);
+const dirLight = new THREE.DirectionalLight(0xffeedd, 1.4);
+dirLight.position.set(6, 12, -4);
 dirLight.castShadow = true;
 dirLight.shadow.mapSize.set(2048, 2048);
 dirLight.shadow.camera.near = 0.1;
-dirLight.shadow.camera.far = 25;
-dirLight.shadow.camera.left = -7;
-dirLight.shadow.camera.right = 7;
-dirLight.shadow.camera.top = 7;
-dirLight.shadow.camera.bottom = -7;
-dirLight.shadow.bias = -0.0001;
-dirLight.shadow.radius = 4;
+dirLight.shadow.camera.far = 30;
+dirLight.shadow.camera.left = -8;
+dirLight.shadow.camera.right = 8;
+dirLight.shadow.camera.top = 8;
+dirLight.shadow.camera.bottom = -8;
+dirLight.shadow.bias = -0.0005;
+dirLight.shadow.radius = 5;
 scene.add(dirLight);
 
-const fillLight = new THREE.DirectionalLight(0xd0e8ff, 0.3);
-fillLight.position.set(-4, 3, 5);
+const fillLight = new THREE.DirectionalLight(0xaaccff, 0.6);
+fillLight.position.set(-5, 4, 6);
 scene.add(fillLight);
 
 // ============================================================
 // Environment — HDRI + fallback
 // ============================================================
 function setupEnvironment() {
-  try {
-    if (typeof THREE.RGBELoader !== 'undefined') {
-      const pmrem = new THREE.PMREMGenerator(renderer);
-      pmrem.compileEquirectangularShader();
-      new THREE.RGBELoader()
-        .setDataType(THREE.UnsignedByteType)
-        .load(
-          'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/kloppenheim_06_puresky_1k.hdr',
-          (texture) => {
-            const envMap = pmrem.fromEquirectangular(texture).texture;
-            scene.environment = envMap;
-            scene.background = envMap;
-            texture.dispose();
-            pmrem.dispose();
-          },
-          undefined,
-          () => setupFallbackSky()
-        );
-    } else {
-      setupFallbackSky();
-    }
-  } catch (e) {
-    setupFallbackSky();
-  }
+  // Always use the fallback sky for better color control and no popping
+  setupFallbackSky();
 }
 
 function setupFallbackSky() {
@@ -514,10 +518,10 @@ function setupFallbackSky() {
   canvas.width = 1; canvas.height = 256;
   const ctx = canvas.getContext('2d');
   const grad = ctx.createLinearGradient(0, 0, 0, 256);
-  grad.addColorStop(0, '#4a90d9');
-  grad.addColorStop(0.4, '#87CEEB');
-  grad.addColorStop(0.75, '#b8daf0');
-  grad.addColorStop(1.0, '#e8dcc8');
+  grad.addColorStop(0, '#1E4A82');
+  grad.addColorStop(0.4, '#3A77B8');
+  grad.addColorStop(0.75, '#6AABC7');
+  grad.addColorStop(1.0, '#B3C3B9');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 1, 256);
   const tex = new THREE.CanvasTexture(canvas);
@@ -584,40 +588,40 @@ function makeWoodTexture(baseColor, grainColor, options = {}) {
 }
 
 function makePalubkyTexture() {
-  const size = 512;
+  const size = 1024;
   const c = document.createElement('canvas');
   c.width = size; c.height = size;
   const ctx = c.getContext('2d');
-  const baseColor = '#B8860B';
+  const baseColor = COLORS.walls; // Use config color
   ctx.fillStyle = baseColor;
   ctx.fillRect(0, 0, size, size);
   // Horizontal planks
-  const plankH = size / 12;
-  for (let p = 0; p < 12; p++) {
+  const numPlanks = 16;
+  const plankH = size / numPlanks;
+  for (let p = 0; p < numPlanks; p++) {
     const y0 = p * plankH;
-    const lightness = 0.9 + Math.random() * 0.2;
-    ctx.fillStyle = `rgba(${lightness > 1 ? 20 : 0},${lightness > 1 ? 10 : 0},0,${Math.abs(lightness - 1) * 0.3})`;
+    const lightness = 0.94 + Math.random() * 0.12;
+    ctx.fillStyle = `rgba(0,0,0,${Math.abs(1 - lightness) * 0.2})`;
     ctx.fillRect(0, y0, size, plankH);
-    // Plank seam
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(0, y0); ctx.lineTo(size, y0);
-    ctx.stroke();
-    // Wood grain
-    ctx.strokeStyle = '#9a7008';
+    // Plank seam with Fake AO
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillRect(0, y0, size, 4);
+    ctx.fillStyle = 'rgba(0,0,0,0.1)';
+    ctx.fillRect(0, y0 + 4, size, 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillRect(0, y0 + plankH - 2, size, 2);
+    // Subtle wood grain
+    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
     for (let i = 0; i < 8; i++) {
-      ctx.globalAlpha = 0.06 + Math.random() * 0.08;
       ctx.lineWidth = 0.5 + Math.random();
-      const y = y0 + Math.random() * plankH;
+      const y = y0 + 6 + Math.random() * (plankH - 12);
       ctx.beginPath(); ctx.moveTo(0, y);
-      for (let x = 0; x < size; x += 8) {
+      for (let x = 0; x < size; x += 16) {
         ctx.lineTo(x, y + Math.sin(x * 0.02 + i) * 2 + (Math.random() - 0.5));
       }
       ctx.stroke();
     }
   }
-  ctx.globalAlpha = 1;
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -625,23 +629,38 @@ function makePalubkyTexture() {
 }
 
 function setupMaterials() {
-  const woodTex = makeWoodTexture('#C4944A', '#8a6020', { knots: 3, repeatX: 1, repeatY: 4 });
-  const palubkyTex = makePalubkyTexture();
-  const floorTex = makeWoodTexture('#A0784C', '#7a5830', { knots: 2, repeatX: 3, repeatY: 2 });
-  const roofTex = makeWoodTexture('#6B3A2A', '#4a2818', { knots: 1, repeatX: 2, repeatY: 2 });
+  const woodTex = makeWoodTexture(COLORS.posts, '#7A5222', { knots: 4, repeatX: 1, repeatY: 4 });
 
-  MAT.posts = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.8 });
-  MAT.walls = new THREE.MeshStandardMaterial({ map: palubkyTex, roughness: 0.85 });
-  MAT.floor = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.9 });
-  MAT.roof = new THREE.MeshStandardMaterial({ map: roofTex, roughness: 0.7 });
-  MAT.roofEdge = new THREE.MeshStandardMaterial({ color: COLORS.roofEdge, roughness: 0.8 });
-  MAT.railing = new THREE.MeshStandardMaterial({ color: COLORS.railing, roughness: 0.75 });
-  MAT.slide = new THREE.MeshStandardMaterial({ color: COLORS.slide, metalness: 0.3, roughness: 0.25 });
-  MAT.ladder = new THREE.MeshStandardMaterial({ color: COLORS.ladder, roughness: 0.8 });
-  MAT.frame = new THREE.MeshStandardMaterial({ color: COLORS.frame, roughness: 0.7 });
-  MAT.glass = new THREE.MeshStandardMaterial({ color: 0xaad4f5, transparent: true, opacity: 0.4, roughness: 0.1, metalness: 0.1 });
-  MAT.concrete = new THREE.MeshStandardMaterial({ color: COLORS.concrete, roughness: 0.9 });
-  MAT.beam = MAT.posts; // same texture and roughness
+  // Vytvoříme texturu palubek tak, aby se vůbec neopakovala v canvasu sama o sobě (zrušíme repeat logic)
+  // Ne, raději jen nastavíme jejím repeat parametrům fixní poměr.
+  const palubkyTex = makePalubkyTexture();
+  // Změníme mapping z defaultního (který se natahuje) na absolutní repeat.
+  // Aby repeat fungoval metricky globálně, neuděláme to v materiálu (pač ten se aplikuje na různé velikosti boxů),
+  // ale upravíme UV mapování přímo na geometriích. To vyřešíme dodatečnou funkcí pro zdi.
+
+  const floorTex = makeWoodTexture(COLORS.floor, '#7A5222', { knots: 3, repeatX: 3, repeatY: 2 });
+  const roofTex = makeWoodTexture(COLORS.roof, '#555C60', { knots: 0, repeatX: 2, repeatY: 2 });
+
+  MAT.posts = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.9, metalness: 0.0 });
+
+  // Stěny budou sdílet jednu texturu, ale my nechceme z materiálů řešit geometrie,
+  // naštěstí existuje lepší trik pro plošné materiály: nepoužijeme repeat na textuře,
+  // protože pak se natahuje s geometrií, ale použijeme repeat úměrný šířce a výšce při tvorbě STĚN, 
+  // případně můžeme textuře nastavit wrap, ale musíme předat konkrétní počet repeatů.
+  // Proto tu jen pripravíme zaklad a budeme to řešit klonováním materialu s ruznym repeatem ve walls.js.
+  MAT.wallsTex = palubkyTex; // save texture to clone it later
+  MAT.walls = new THREE.MeshStandardMaterial({ map: palubkyTex, roughness: 1.0, metalness: 0.0 });
+
+  MAT.floor = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.95, metalness: 0.0 });
+  MAT.roof = new THREE.MeshStandardMaterial({ map: roofTex, roughness: 0.85, metalness: 0.1 });
+  MAT.roofEdge = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.9, metalness: 0.0 });
+  MAT.railing = new THREE.MeshStandardMaterial({ color: COLORS.railing, roughness: 1.0, metalness: 0.0 });
+  MAT.slide = new THREE.MeshStandardMaterial({ color: COLORS.slide, roughness: 0.15, metalness: 0.1, clearcoat: 1.0, clearcoatRoughness: 0.1 });
+  MAT.ladder = new THREE.MeshStandardMaterial({ color: COLORS.ladder, roughness: 1.0, metalness: 0.0 });
+  MAT.frame = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.9, metalness: 0.0 });
+  MAT.glass = new THREE.MeshStandardMaterial({ color: 0x88ccee, transparent: true, opacity: 0.4, roughness: 0.05, metalness: 0.2 });
+  MAT.concrete = new THREE.MeshStandardMaterial({ color: COLORS.concrete, roughness: 0.95, metalness: 0.0 });
+  MAT.beam = MAT.posts;
 }
 
 // ============================================================
@@ -669,16 +688,16 @@ function createGround() {
   const c = document.createElement('canvas');
   c.width = 512; c.height = 512;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#4a7a2e';
+  ctx.fillStyle = '#2E4F1B';
   ctx.fillRect(0, 0, 512, 512);
   for (let i = 0; i < 3000; i++) {
-    const g = 80 + Math.random() * 60;
-    ctx.fillStyle = `rgba(${30 + Math.random() * 40}, ${g}, ${20 + Math.random() * 20}, 0.15)`;
+    const g = 60 + Math.random() * 50; // Darker green hints
+    ctx.fillStyle = `rgba(${25 + Math.random() * 30}, ${g}, ${15 + Math.random() * 20}, 0.2)`;
     ctx.fillRect(Math.random() * 512, Math.random() * 512, 2 + Math.random() * 6, 2 + Math.random() * 6);
   }
-  ctx.strokeStyle = '#5a8a35';
+  ctx.strokeStyle = '#3E6625'; // Darker stroke
   for (let i = 0; i < 500; i++) {
-    ctx.globalAlpha = 0.08;
+    ctx.globalAlpha = 0.1;
     ctx.lineWidth = 0.5;
     const x = Math.random() * 512, y = Math.random() * 512;
     ctx.beginPath(); ctx.moveTo(x, y);
@@ -754,14 +773,6 @@ function createPosts() {
     g.add(m);
   });
 
-  // 1 střední sloupek (pouze přední terasa, zadní odstraněn)
-  [[-hd, H_front]].forEach(([z, h]) => {
-    const ph = h - FH;
-    const m = box(P * 0.85, ph, P * 0.85, MAT.posts);
-    m.position.set(0, FH + ph / 2, z);
-    g.add(m);
-  });
-
   // divZ = pozice přední stěny kabiny = -hd + CONFIG.TD
   const divZ = CONFIG.divZ;
   // 2 dělicí sloupky terasa/kabina, od H1 výš po H_cabin_front
@@ -787,11 +798,31 @@ function createBeams() {
   const H2 = CONFIG.H;
   const HP = H2 + CONFIG.ROOF_PEAK;
 
-  // === Stropní nosníky pod podlahou 2. patra (joists) ===
-  for (let i = 0; i < 4; i++) {
-    const z = -hd + CONFIG.D / 5 * (i + 0.5);
+  // === Podlaha 2. patra — obvodový rám + středový trám + joists ===
+  const floor2Y = CONFIG.H1 - B / 2;
+
+  // Obvodové trámy (rám dokola)
+  [-hd, hd].forEach(z => {
     const m = box(CONFIG.W, B, B, MAT.beam);
-    m.position.set(0, CONFIG.H1 - B / 2, z);
+    m.position.set(0, floor2Y, z);
+    g.add(m);
+  });
+  [-hw, hw].forEach(x => {
+    const m = box(B, B, CONFIG.D, MAT.beam);
+    m.position.set(x, floor2Y, 0);
+    g.add(m);
+  });
+
+  // Středový trám — podél Z, uprostřed šířky
+  const center2 = box(B, B, CONFIG.D, MAT.beam);
+  center2.position.set(0, floor2Y, 0);
+  g.add(center2);
+
+  // Příčné joists (3 ks rovnoměrně uvnitř)
+  for (let i = 0; i < 3; i++) {
+    const z = -hd + CONFIG.D / 4 * (i + 1);
+    const m = box(CONFIG.W, B, B, MAT.beam);
+    m.position.set(0, floor2Y, z);
     g.add(m);
   }
 
@@ -876,95 +907,107 @@ function createFloors() {
 // Walls — stěny
 // ============================================================
 
+// Vytvoří materiál pro stěnu se správným mapováním textury podle skutečných rozměrů
+// Chceme aby 1 "opakovani" textury palubek (což je 16 prken na obrazek) mělo fixní reálnou velikost.
+// 1 prkno = 20 cm = 0.20 m. 16 prken = 3.20 m výšky na jednu texturu.
+// Na šířku nastavíme třeba 2.0 m na jedno zopakování.
+const PLANK_TEX_H = 3.20; // 16 prken × 0.20 m
+const PLANK_TEX_W = 2.0;  // šířka textury v metrech
+
+// Materiál pro BoxGeometry (UV 0..1)
+function getWallMat(width, height, offsetY = 0) {
+  const m = MAT.walls.clone();
+  m.map = MAT.wallsTex.clone();
+  m.map.needsUpdate = true;
+  m.map.repeat.set(width / PLANK_TEX_W, height / PLANK_TEX_H);
+  m.map.offset.set(0, (offsetY % PLANK_TEX_H) / PLANK_TEX_H);
+  return m;
+}
+
+// Materiál pro ExtrudeGeometry (UV ve světových jednotkách/metrech)
+function getWallMatExtrude(offsetY = 0) {
+  const m = MAT.walls.clone();
+  m.map = MAT.wallsTex.clone();
+  m.map.needsUpdate = true;
+  // ExtrudeGeometry UV jsou přímo v metrech, takže repeat = 1/velikost_textury
+  m.map.repeat.set(1 / PLANK_TEX_W, 1 / PLANK_TEX_H);
+  m.map.offset.set(0, (offsetY % PLANK_TEX_H) / PLANK_TEX_H);
+  return m;
+}
+
 // Helper: stěna s otvorem (okno/dveře)
-function wallWithHole(totalW, totalH, holeX, holeY, holeW, holeH, mat, depth) {
+function wallWithHole(totalW, totalH, holeX, holeY, holeW, holeH, depth, offsetY = 0) {
   const g = new THREE.Group();
-  const leftEdge = -totalW / 2;
-  const rightEdge = totalW / 2;
-  const holeLeft = holeX - holeW / 2;
-  const holeRight = holeX + holeW / 2;
-  const holeTop = holeY + holeH / 2;
-  const holeBottom = holeY - holeH / 2;
-  const segments = [
-    // vlevo od otvoru
-    {
-      x: (leftEdge + holeLeft) / 2,
-      w: holeLeft - leftEdge,
-      y: totalH / 2, h: totalH
-    },
-    // vpravo od otvoru
-    {
-      x: (holeRight + rightEdge) / 2,
-      w: rightEdge - holeRight,
-      y: totalH / 2, h: totalH
-    },
-    // nad otvorem
-    {
-      x: holeX, w: holeW,
-      y: (holeTop + totalH) / 2,
-      h: totalH - holeTop
-    },
-    // pod otvorem
-    {
-      x: holeX, w: holeW,
-      y: holeBottom / 2,
-      h: holeBottom
-    },
-  ];
-  segments.forEach(s => {
-    if (s.w <= 0.001 || s.h <= 0.001) return;
-    const m = box(s.w, s.h, depth, mat);
-    m.position.set(s.x, s.y, 0);
-    g.add(m);
-  });
+  const shape = new THREE.Shape();
+  const hw = totalW / 2;
+  // Vnější obdélník (CCW)
+  shape.moveTo(-hw, 0);
+  shape.lineTo(hw, 0);
+  shape.lineTo(hw, totalH);
+  shape.lineTo(-hw, totalH);
+  shape.lineTo(-hw, 0);
+
+  // Vnitřní otvor (CW)
+  const p = new THREE.Path();
+  const l = holeX - holeW / 2;
+  const r = holeX + holeW / 2;
+  const b = holeY - holeH / 2;
+  const t = holeY + holeH / 2;
+  p.moveTo(l, b);
+  p.lineTo(l, t);
+  p.lineTo(r, t);
+  p.lineTo(r, b);
+  p.lineTo(l, b);
+  shape.holes.push(p);
+
+  // Vygenerovat UV na zakladé pozice (protože extrude si generuje UV blbě)
+  const geom = new THREE.ExtrudeGeometry(shape, { depth: depth, bevelEnabled: false, curveSegments: 1 });
+  geom.translate(0, -totalH / 2, -depth / 2);
+
+  const mesh = new THREE.Mesh(geom, getWallMatExtrude(offsetY));
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.position.set(0, totalH / 2, 0);
+  g.add(mesh);
   return g;
 }
 
 // Wall with two holes (door + window)
-function wallWithTwoHoles(totalW, totalH, holes, mat, depth) {
-  // holes: [{x, y, w, h}, ...]
-  // Simple approach: build column strips
+function wallWithTwoHoles(totalW, totalH, holes, depth, offsetY = 0) {
   const g = new THREE.Group();
-  // Sort holes by x
-  holes.sort((a, b) => a.x - b.x);
-  const h1 = holes[0], h2 = holes[1];
+  const shape = new THREE.Shape();
+  const hw = totalW / 2;
+  // Vnější obdélník (CCW)
+  shape.moveTo(-hw, 0);
+  shape.lineTo(hw, 0);
+  shape.lineTo(hw, totalH);
+  shape.lineTo(-hw, totalH);
+  shape.lineTo(-hw, 0);
 
-  // Full height strips between/around holes
-  const leftEdge = -totalW / 2;
-  const rightEdge = totalW / 2;
-
-  // Columns: left of h1, between h1 and h2, right of h2
-  const columns = [
-    { x0: leftEdge, x1: h1.x - h1.w / 2 },
-    { x0: h1.x + h1.w / 2, x1: h2.x - h2.w / 2 },
-    { x0: h2.x + h2.w / 2, x1: rightEdge },
-  ];
-  columns.forEach(col => {
-    const cw = col.x1 - col.x0;
-    if (cw <= 0.001) return;
-    const m = box(cw, totalH, depth, mat);
-    m.position.set((col.x0 + col.x1) / 2, totalH / 2, 0);
-    g.add(m);
-  });
-
-  // Rows above/below each hole (in their x range)
+  // Otvory (CW winding)
   holes.forEach(hole => {
-    // above
-    const aboveH = totalH - (hole.y + hole.h / 2);
-    if (aboveH > 0.001) {
-      const m = box(hole.w, aboveH, depth, mat);
-      m.position.set(hole.x, hole.y + hole.h / 2 + aboveH / 2, 0);
-      g.add(m);
-    }
-    // below
-    const belowH = hole.y - hole.h / 2;
-    if (belowH > 0.001) {
-      const m = box(hole.w, belowH, depth, mat);
-      m.position.set(hole.x, belowH / 2, 0);
-      g.add(m);
-    }
+    const p = new THREE.Path();
+    const l = hole.x - hole.w / 2;
+    const r = hole.x + hole.w / 2;
+    const b = hole.y - hole.h / 2;
+    const t = hole.y + hole.h / 2;
+    p.moveTo(l, b);
+    p.lineTo(l, t);
+    p.lineTo(r, t);
+    p.lineTo(r, b);
+    p.lineTo(l, b);
+    shape.holes.push(p);
   });
 
+  const geom = new THREE.ExtrudeGeometry(shape, { depth: depth, bevelEnabled: false, curveSegments: 1 });
+  geom.translate(0, -totalH / 2, -depth / 2);
+
+  const mesh = new THREE.Mesh(geom, getWallMatExtrude(offsetY));
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+
+  mesh.position.set(0, totalH / 2, 0);
+  g.add(mesh);
   return g;
 }
 
@@ -975,20 +1018,22 @@ function createWalls() {
   const divZ = CONFIG.divZ;
 
   // === Zadní stěna (+Z) — plná, celá výška (1. + 2. patro) ===
-  const backWall = box(CONFIG.W, CONFIG.H, T, MAT.walls);
+  const backMat = getWallMat(CONFIG.W, CONFIG.H, 0); // startuje na světle od 0 nahoru
+  const backWall = box(CONFIG.W, CONFIG.H, T, backMat);
   backWall.position.set(0, CONFIG.H / 2, hd + T / 2);
   g.add(backWall);
 
   // === Levá stěna (-X) — plná 1. patro + 2. patro s oknem ===
   // 1. patro: plná
-  const left1 = box(T, CONFIG.H1, CONFIG.D, MAT.walls);
+  const l1Mat = getWallMat(CONFIG.D, CONFIG.H1, 0);
+  const left1 = box(T, CONFIG.H1, CONFIG.D, l1Mat);
   left1.position.set(-hw - T / 2, CONFIG.H1 / 2, 0);
   g.add(left1);
 
   // 2. patro levá stěna s oknem — pouze kabina (ne terasa)
   const r2H = CONFIG.H - CONFIG.H1;
   const win2 = { x: 0, y: r2H / 2, w: CONFIG.SIDE_WIN_W, h: CONFIG.SIDE_WIN_H };
-  const left2 = wallWithHole(CONFIG.CD, r2H, win2.x, win2.y, win2.w, win2.h, MAT.walls, T);
+  const left2 = wallWithHole(CONFIG.CD, r2H, win2.x, win2.y, win2.w, win2.h, T, CONFIG.H1); // offset = H1
   left2.rotation.y = Math.PI / 2;
   left2.position.set(-hw - T / 2, CONFIG.H1, divZ + CONFIG.CD / 2);
   g.add(left2);
@@ -998,7 +1043,8 @@ function createWalls() {
 
   // === Pravá stěna (+X) — plná, pouze 2. patro, pouze kabina (ne terasa) ===
   const r2H_right = CONFIG.H - CONFIG.H1;
-  const right2 = box(T, r2H_right, CONFIG.CD, MAT.walls);
+  const r2Mat = getWallMat(CONFIG.CD, r2H_right, CONFIG.H1);
+  const right2 = box(T, r2H_right, CONFIG.CD, r2Mat);
   right2.position.set(hw + T / 2, CONFIG.H1 + r2H_right / 2, divZ + CONFIG.CD / 2);
   g.add(right2);
 
@@ -1016,19 +1062,43 @@ function createWalls() {
     { x: doorX, y: CONFIG.DOOR_H / 2, w: CONFIG.DOOR_W, h: CONFIG.DOOR_H },
     { x: winX, y: holeY, w: CONFIG.FRONT_WIN_W, h: CONFIG.FRONT_WIN_H },
   ];
-  const frontCabin = wallWithTwoHoles(CONFIG.W, cabH, holes, MAT.walls, T);
+  // Front cabin wall panels
+  const frontCabin = wallWithTwoHoles(CONFIG.W, cabH, holes, T, CONFIG.H1);
   frontCabin.position.set(0, CONFIG.H1, divZ - T / 2);
   g.add(frontCabin);
 
-  // Door frame
+  // Door frame (s obnoveným vlastním horním překladem)
   addDoorFrame(g, doorX, CONFIG.H1, divZ - T, CONFIG.DOOR_W, CONFIG.DOOR_H, T);
-  // Front cabin window frame
-  // Y pozice se počítá v absolute coordinates, takže CONFIG.H1 + holeY
+
+  // Front cabin window frame (obnovený s horním překladem, šířka okna zachována)
   addWindowFrame(g, winX, CONFIG.H1 + holeY, divZ - T, CONFIG.FRONT_WIN_W, CONFIG.FRONT_WIN_H, T, 'z', false);
+
+  // Shelf (pultík) under front window — protrudes toward terrace
+  const shelfW = CONFIG.FRONT_WIN_W + 0.10; // slightly wider than window
+  const shelfD = 0.18; // depth of shelf protruding outward
+  const shelfT = 0.03; // thickness
+  const shelfY = CONFIG.H1 + holeY - CONFIG.FRONT_WIN_H / 2 - 0.01; // just below window
+  const shelfZ = divZ - T - shelfD / 2;
+  const shelf = box(shelfW, shelfT, shelfD, MAT.frame, true, true);
+  shelf.position.set(winX, shelfY, shelfZ);
+  g.add(shelf);
+
+  // Shelf brackets (two angled supports)
+  const bracketH = 0.12;
+  const bracketD = shelfD - 0.02;
+  const bracketT = 0.02;
+  [-1, 1].forEach(side => {
+    const bracket = box(bracketT, bracketH, bracketD, MAT.frame, false, false);
+    bracket.position.set(winX + side * (shelfW / 2 - 0.06), shelfY - bracketH / 2 - shelfT / 2, shelfZ);
+    g.add(bracket);
+  });
 
   // === Štítové zdi (gable walls) — trojúhelníky mezi stěnou a střechou ===
   const H2 = CONFIG.H;
   const gableLen = hd - divZ; // hloubka kabiny podél Z
+
+  // Na štíty uděláme materiál — ExtrudeGeometry, UV ve světových jednotkách
+  const gableMat = getWallMatExtrude(H2);
 
   [1, -1].forEach(side => {
     const shape = new THREE.Shape();
@@ -1045,8 +1115,8 @@ function createWalls() {
     }
     shape.closePath();
 
-    const geom = new THREE.ExtrudeGeometry(shape, { depth: T, bevelEnabled: false });
-    const mesh = new THREE.Mesh(geom, MAT.walls.clone());
+    const geom = new THREE.ExtrudeGeometry(shape, { depth: T, bevelEnabled: false, curveSegments: 1 });
+    const mesh = new THREE.Mesh(geom, gableMat);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     mesh.rotation.y = side * Math.PI / 2;
@@ -1071,9 +1141,9 @@ function addWindowFrame(g, x, y, z, w, h, depth, axis, crosshair = false) {
       // bottom
       { pw: w + FT * 2, ph: FT, pd: depth * 2, ox: 0, oy: -h / 2 - FT / 2, oz: 0 },
       // left
-      { pw: FT, ph: h, pd: depth * 2, ox: -w / 2 - FT / 2, oy: 0, oz: 0 },
+      { pw: FT, ph: h, pd: depth * 2, ox: 0, oy: 0, oz: -w / 2 - FT / 2 },
       // right
-      { pw: FT, ph: h, pd: depth * 2, ox: w / 2 + FT / 2, oy: 0, oz: 0 },
+      { pw: FT, ph: h, pd: depth * 2, ox: 0, oy: 0, oz: w / 2 + FT / 2 },
     ];
     if (crosshair) {
       parts.push({ pw: w, ph: FT, pd: depth * 2, ox: 0, oy: 0, oz: 0 }); // horiz
@@ -1090,7 +1160,7 @@ function addWindowFrame(g, x, y, z, w, h, depth, axis, crosshair = false) {
     glass.position.set(x, y, z);
     g.add(glass);
   } else {
-    // z-facing window
+    // z-facing window standard
     const parts = [
       { pw: w + FT * 2, ph: FT, pd: depth * 2, ox: 0, oy: h / 2 + FT / 2, oz: 0 },
       { pw: w + FT * 2, ph: FT, pd: depth * 2, ox: 0, oy: -h / 2 - FT / 2, oz: 0 },
@@ -1110,7 +1180,7 @@ function addWindowFrame(g, x, y, z, w, h, depth, axis, crosshair = false) {
 
 function addDoorFrame(g, x, y, z, w, h, depth) {
   const FT = 0.04;
-  // sides
+  // sides 
   [-1, 1].forEach(side => {
     const m = box(FT, h, depth * 2, MAT.frame, false, false);
     m.position.set(x + side * (w / 2 + FT / 2), y + h / 2, z);
@@ -1182,17 +1252,21 @@ function createRailing() {
   const baseY = CONFIG.H1 + 0.06; // on top of 2nd floor
 
   function addPost(x, z, height) {
-    const m = box(RT, height, RT, MAT.railing);
+    const m = box(RT, height, RT, MAT.posts);
     m.position.set(x, baseY + height / 2, z);
     g.add(m);
   }
-  function addRail(x1, z1, x2, z2, y) {
+  const slatH = 0.12;
+  const slatT = 0.02;
+  const numSlats = 4;
+
+  function addSlat(x1, z1, x2, z2, y, offsetX, offsetZ) {
     const dx = x2 - x1, dz = z2 - z1;
     const len = Math.sqrt(dx * dx + dz * dz);
     const angle = Math.atan2(dz, dx);
-    const m = box(len, RT, RT, MAT.railing, false, false);
+    const m = box(len, slatH, slatT, MAT.railing, false, false);
     m.rotation.y = angle;
-    m.position.set((x1 + x2) / 2, y, (z1 + z2) / 2);
+    m.position.set((x1 + x2) / 2 + offsetX, y, (z1 + z2) / 2 + offsetZ);
     g.add(m);
   }
 
@@ -1204,9 +1278,6 @@ function createRailing() {
     const x = -hw + CONFIG.W / numFront * i;
     addPost(x, zFront, RH);
   }
-  // Top rail
-  addRail(-hw, zFront, hw, zFront, baseY + RH - RT / 2);
-  // Střední tyčka odstraněna
 
   // Levé zábradlí (-X strana terasy)
   const xLeft = -hw;
@@ -1215,8 +1286,26 @@ function createRailing() {
     const z = zFront + CONFIG.TD / numLeft * i;
     addPost(xLeft, z, RH);
   }
-  addRail(xLeft, zFront, xLeft, divZ, baseY + RH - RT / 2);
-  addRail(xLeft, zFront, xLeft, divZ, baseY + RH / 2);
+
+  // Vodorovné latě (4 nad sebou)
+  const gapY = (RH - numSlats * slatH) / 4; // 4 mezery pro 4 latě, horní lícuje s výškou sloupků
+  const gapStartX = -hw + CONFIG.W / numFront; // Druhý sloupek (x: -0.93)
+
+  for (let i = 0; i < numSlats; i++) {
+    const y = baseY + gapY + slatH / 2 + i * (slatH + gapY);
+
+    // Přední latě (připevněné zepředu)
+    if (i === numSlats - 1) {
+      // Nejvyšší lať je vcelku přes celou šířku
+      addSlat(-hw - RT / 2 - slatT, zFront, hw + RT / 2 + slatT, zFront, y, 0, -(RT / 2 + slatT / 2));
+    } else {
+      // Spodní 3 latě začínají až od druhého sloupku, aby byl volný průchod ke skluzavce
+      addSlat(gapStartX - RT / 2, zFront, hw + RT / 2 + slatT, zFront, y, 0, -(RT / 2 + slatT / 2));
+    }
+
+    // Levé latě (připevněné zleva)
+    addSlat(xLeft, zFront - RT / 2, xLeft, divZ, y, -(RT / 2 + slatT / 2), 0);
+  }
 
   return g;
 }
@@ -1279,17 +1368,17 @@ function createLadder() {
   // Skupinka postavena svisle (podél +Y), pak rotována
   const ladderGroup = new THREE.Group();
 
-  // Dvě boční lišty
+  // Dvě boční lišty (bílé)
   [-1, 1].forEach(side => {
-    const rail = box(0.05, LH, 0.05, MAT.ladder);
+    const rail = box(0.05, LH, 0.05, MAT.walls);
     rail.position.set(0, LH / 2, side * LW / 2);
     ladderGroup.add(rail);
   });
 
-  // Příčle
+  // Příčle (dřevěné)
   for (let i = 0; i < CONFIG.LADDER_RUNGS; i++) {
     const t = (i + 0.5) / CONFIG.LADDER_RUNGS;
-    const rung = box(0.04, 0.04, LW, MAT.ladder);
+    const rung = box(0.04, 0.04, LW, MAT.posts);
     rung.position.set(0, LH * t, 0);
     ladderGroup.add(rung);
   }
@@ -1300,50 +1389,6 @@ function createLadder() {
   ladderGroup.position.set(bottomX, bottomY, ladderZ);
 
   g.add(ladderGroup);
-  return g;
-}
-
-// ============================================================
-// Labels — 3D text sprites
-// ============================================================
-function makeLabel(text, color = '#d4c9a8', fontSize = 14) {
-  const c = document.createElement('canvas');
-  c.width = 256; c.height = 64;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = 'rgba(26,31,22,0.75)';
-  ctx.roundRect ? ctx.roundRect(4, 4, c.width - 8, c.height - 8, 6) : ctx.fillRect(4, 4, c.width - 8, c.height - 8);
-  ctx.fill();
-  ctx.strokeStyle = '#3a4030';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.fillStyle = color;
-  ctx.font = `${fontSize}px Segoe UI, sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(text, c.width / 2, c.height / 2);
-  const tex = new THREE.CanvasTexture(c);
-  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
-  const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(1.2, 0.3, 1);
-  return sprite;
-}
-
-function createLabels() {
-  const g = new THREE.Group(); g.name = 'labels';
-  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
-
-  const items = [
-    { text: 'KABINA  310\u00d7172 cm', x: 0, y: CONFIG.H1 + 0.7, z: hd / 2 + 0.2 },
-    { text: 'TERASA  310\u00d770 cm', x: 0, y: CONFIG.H1 + 0.3, z: -hd + CONFIG.TD / 2 },
-    { text: 'P\u0158\u00cdZEM\u00cd  150 cm', x: 0, y: 0.7, z: -hd / 2 },
-    { text: 'Klouz\u00e1\u010dka  260 cm', x: hw + 0.4, y: CONFIG.H1 / 2, z: -hd - 0.4, color: COLORS.slide },
-    { text: '\u017deb\u0159\u00edk  6 p\u0159\u00ed\u010dek', x: -hw - 0.8, y: CONFIG.H1 / 2, z: 0, color: COLORS.ladder },
-  ];
-  items.forEach(it => {
-    const s = makeLabel(it.text, it.color || '#d4c9a8');
-    s.position.set(it.x, it.y, it.z);
-    g.add(s);
-  });
   return g;
 }
 
@@ -1584,21 +1629,23 @@ function drawDimensions(view) {
 
   // ---- PUDORYS 1. PATRO ----
   if (view === 'floor1') {
-    var tl = ws(-hw, 0, hd);   // top-left (zadni-levy)
-    var tr = ws(hw, 0, hd);    // top-right (zadni-pravy)
-    var bl = ws(-hw, 0, -hd);  // bottom-left (predni-levy)
-    var br = ws(hw, 0, -hd);   // bottom-right (predni-pravy)
+    // Kamera je nad domem, přední strana (-Z) je nahoře (malé screen Y),
+    // zadní strana (+Z) je dole (velké screen Y).
+    var tl = ws(-hw, 0, hd);   // screen dolů-vlevo (zadní-levý)
+    var tr = ws(hw, 0, hd);    // screen dolů-vpravo (zadní-pravý)
+    var bl = ws(-hw, 0, -hd);  // screen nahoru-vlevo (přední-levý)
+    var br = ws(hw, 0, -hd);   // screen nahoru-vpravo (přední-pravý)
 
-    // Sirka 310 cm (dole)
-    dimLineH(bl, br, bl.y, br.y, bl.y + ROW2);
-    drawDimText('310 cm', (bl.x + br.x) / 2, bl.y + ROW2, false);
+    // Sirka 310 cm — pod zadní hranou budovy (mimo budovu dole)
+    dimLineH(bl, br, tl.y, tr.y, tl.y + ROW2);
+    drawDimText('310 cm', (bl.x + br.x) / 2, tl.y + ROW2, false);
 
     // Hloubka 242 cm (vpravo)
     dimLineV(br, tr, br.x, tr.x, br.x + ROW2);
     drawDimText('242 cm', br.x + ROW2, (br.y + tr.y) / 2, true);
 
     // Popisek
-    drawAreaLabel('PRIZEMI — otevreno vpredu a vlevo', (tl.x + br.x) / 2, (tl.y + bl.y) / 2, null);
+    drawAreaLabel('PRIZEMI — otevreno vpredu', (tl.x + br.x) / 2, (tl.y + bl.y) / 2, null);
   }
 
   // ---- PUDORYS 2. PATRO ----
@@ -1610,9 +1657,9 @@ function drawDimensions(view) {
     var divR = ws(hw, 0, divZ);   // delici cara vpravo
     var divL = ws(-hw, 0, divZ);  // delici cara vlevo
 
-    // Sirka 310 cm (dole)
-    dimLineH(bl, br, bl.y, br.y, bl.y + ROW2);
-    drawDimText('310 cm', (bl.x + br.x) / 2, bl.y + ROW2, false);
+    // Sirka 310 cm — pod zadní hranou budovy (mimo budovu dole)
+    dimLineH(bl, br, tl.y, tr.y, tl.y + ROW2);
+    drawDimText('310 cm', (bl.x + br.x) / 2, tl.y + ROW2, false);
 
     // Hloubka celkova 242 cm (vpravo, rada 2)
     dimLineV(br, tr, br.x, tr.x, br.x + ROW2);
@@ -1658,6 +1705,25 @@ function drawDimensions(view) {
     // Hreben +45 cm (vlevo, rada 2)
     dimLineV(tlTop, tlPeak, tlTop.x, tlPeak.x, tlTop.x - ROW2);
     drawDimText('+45 cm', tlTop.x - ROW2, (tlTop.y + tlPeak.y) / 2, true);
+
+    // Zabradli 90 cm (vpravo, rada 1)
+    var railBot = ws(hw, CONFIG.H1, -hd);
+    var railTop = ws(hw, CONFIG.H1 + CONFIG.RAIL_H, -hd);
+    dimLineV(railBot, railTop, railBot.x, railTop.x, railBot.x + ROW1);
+    drawDimText('90 cm', railBot.x + ROW1, (railBot.y + railTop.y) / 2, true);
+
+    // Dvere 55x110 cm (kotovane v pohledu)
+    var doorX = -hw + CONFIG.DOOR_W / 2 + CONFIG.DOOR_OFFSET_X + 0.15;
+    var doorBot = ws(doorX, CONFIG.H1, divZ);
+    var doorTop = ws(doorX, CONFIG.H1 + CONFIG.DOOR_H, divZ);
+    drawAreaLabel('dvere 55x110', doorBot.x, (doorBot.y + doorTop.y) / 2, null);
+
+    // Okno predni steny
+    var doorRE = doorX + CONFIG.DOOR_W / 2;
+    var winCX = doorRE + (hw - doorRE) / 2;
+    var winCY = CONFIG.H1 + (CONFIG.H - CONFIG.H1) / 2;
+    var winP = ws(winCX, winCY, divZ);
+    drawAreaLabel('okno 50x45', winP.x, winP.y, null);
 
     // Popisky
     drawAreaLabel('PRIZEMI (otevreno)', (bl.x + br.x) / 2, (bl.y + tlMid.y) / 2, null);
@@ -1788,6 +1854,11 @@ let composer = null;
 const playhouse = new THREE.Group();
 
 function switchView(view) {
+  // Exit walk mode when switching views
+  if (walkModeOn) {
+    exitWalkMode();
+    document.getElementById('toggle-walk').classList.remove('on');
+  }
   currentView = view;
   document.querySelectorAll('.tab').forEach(t => {
     t.classList.toggle('active', t.dataset.view === view);
@@ -1805,10 +1876,20 @@ function switchView(view) {
 
   sectionPlane.constant = 1000; // default: no clipping
 
+  // Obnovit viditelnost všech objektů před přepnutím (kromě dimensions — ty řídí toggle)
+  playhouse.traverse(c => {
+    if (c.name !== 'dimensions' && c.parent && c.parent.name !== 'dimensions') {
+      c.visible = true;
+    }
+  });
+
+  // Stíny jen v 3D pohledu — v technických výkresech ruší
+  renderer.shadowMap.enabled = is3D;
+  dirLight.castShadow = is3D;
+  renderer.shadowMap.needsUpdate = true;
+
   if (view === '3d') {
     activeCamera = perspCamera;
-    // Show all
-    playhouse.traverse(c => { if (c.isMesh) c.visible = true; });
   } else if (view === 'floor1') {
     setupOrthoView(
       new THREE.Vector3(0, 10, 0),
@@ -1816,37 +1897,53 @@ function switchView(view) {
       -hw - pad, hw + pad, hd + pad, -hd - pad
     );
     // Zobrazit pouze 1. patro (y = 0 až H1)
-    // Kamera je na y=10, takže near=10-H1, far=10+0.1
-    orthoCamera.near = 10 - CONFIG.H1 - 0.05;
+    // Kamera je na y=10, near/far ořízne vše mimo rozsah Y 0..H1-0.01
+    orthoCamera.near = 10 - CONFIG.H1 + 0.01;
     orthoCamera.far = 10.15;
     orthoCamera.updateProjectionMatrix();
+    // Skrýt prvky 2. patra které by mohly prosakovat
+    playhouse.traverse(c => {
+      if (c.name === 'slide' || c.name === 'railing' || c.name === 'ladder') {
+        c.visible = false;
+      }
+    });
   } else if (view === 'floor2') {
     setupOrthoView(
       new THREE.Vector3(0, 10, 0),
       new THREE.Vector3(0, 0, 0),
       -hw - pad, hw + pad, hd + pad, -hd - pad
     );
-    // Zobrazit pouze 2. patro (y = H1 až H+ROOF_PEAK)
-    orthoCamera.near = 10 - CONFIG.H - CONFIG.ROOF_PEAK - 0.3;
-    orthoCamera.far = 10 - CONFIG.H1 + 0.15;
+    // Zobrazit pouze 2. patro (y = H1 až H) — bez střechy
+    orthoCamera.near = 10 - CONFIG.H - 0.05;
+    orthoCamera.far = 10 - CONFIG.H1 + 0.01;
     orthoCamera.updateProjectionMatrix();
+    // Skrýt střechu, patky a zem — v půdorysu 2. patra nechceme
+    playhouse.traverse(c => {
+      if (c.name === 'roof' || c.name === 'footings' || c.name === 'ground' || c.name === 'contactShadow') {
+        c.visible = false;
+      }
+    });
   } else if (view === 'front') {
+    // Frustum bounds jsou view-space offsety od pozice kamery (ne absolutní world Y)
+    const halfH = H / 2 + pad;
     setupOrthoView(
       new THREE.Vector3(0, H / 2, -10),
       new THREE.Vector3(0, H / 2, 0),
-      -hw - pad, hw + pad, H + pad, -pad
+      -hw - pad, hw + pad, halfH, -halfH
     );
   } else if (view === 'side') {
+    const halfH = H / 2 + pad;
     setupOrthoView(
       new THREE.Vector3(10, H / 2, 0),
       new THREE.Vector3(0, H / 2, 0),
-      -hd - pad, hd + pad, H + pad, -pad
+      -hd - pad, hd + pad, halfH, -halfH
     );
   } else if (view === 'section') {
+    const halfH = H / 2 + pad;
     setupOrthoView(
       new THREE.Vector3(10, H / 2, 0),
       new THREE.Vector3(0, H / 2, 0),
-      -hd - pad, hd + pad, H + pad, -pad
+      -hd - pad, hd + pad, halfH, -halfH
     );
     sectionPlane.constant = 0; // Clip at X=0
   }
@@ -1914,7 +2011,7 @@ renderer.domElement.addEventListener('mousedown', e => {
 renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
 window.addEventListener('mouseup', () => isDragging = false);
 window.addEventListener('mousemove', e => {
-  if (!isDragging || currentView !== '3d') return;
+  if (!isDragging || currentView !== '3d' || walkModeOn) return;
   const dx = e.clientX - lastMouse.x;
   const dy = e.clientY - lastMouse.y;
   lastMouse = { x: e.clientX, y: e.clientY };
@@ -1937,7 +2034,7 @@ window.addEventListener('mousemove', e => {
   perspCamera.lookAt(orbitTarget);
 });
 renderer.domElement.addEventListener('wheel', e => {
-  if (currentView !== '3d') return;
+  if (currentView !== '3d' || walkModeOn) return;
   spherical.radius *= (1 + e.deltaY * 0.001);
   spherical.radius = Math.max(1, Math.min(20, spherical.radius));
   _orbitPos.setFromSpherical(spherical).add(orbitTarget);
@@ -1977,8 +2074,6 @@ renderer.domElement.addEventListener('touchmove', e => {
 // Toggles
 // ============================================================
 let wireframeOn = false;
-let labelsOn = false;
-
 document.getElementById('toggle-wire').addEventListener('click', function () {
   wireframeOn = !wireframeOn;
   this.classList.toggle('on', wireframeOn);
@@ -1989,19 +2084,23 @@ document.getElementById('toggle-wire').addEventListener('click', function () {
   });
 });
 
-document.getElementById('toggle-labels').addEventListener('click', function () {
-  labelsOn = !labelsOn;
-  this.classList.toggle('on', labelsOn);
-  const labelsGroup = playhouse.getObjectByName('labels');
-  if (labelsGroup) labelsGroup.visible = labelsOn;
-});
-
 let dimsOn = false;
 document.getElementById('toggle-dims').addEventListener('click', function () {
   dimsOn = !dimsOn;
   this.classList.toggle('on', dimsOn);
   const dimsGroup = playhouse.getObjectByName('dimensions');
   if (dimsGroup) dimsGroup.visible = dimsOn;
+});
+
+document.getElementById('toggle-walk').addEventListener('click', function () {
+  if (currentView !== '3d') return;
+  const entering = !walkModeOn;
+  this.classList.toggle('on', entering);
+  if (entering) {
+    enterWalkMode();
+  } else {
+    exitWalkMode();
+  }
 });
 
 // ============================================================
@@ -2014,6 +2113,405 @@ document.querySelectorAll('.tab').forEach(tab => {
 // View presets
 document.querySelectorAll('.vbtn').forEach(btn => {
   btn.addEventListener('click', () => setPreset(btn.dataset.preset));
+});
+
+// ============================================================
+// Walk Mode — procházka s postavičkou + fyzika terénu
+// ============================================================
+let walkModeOn = false;
+let walkChar = null;
+let walkYaw = 0;
+let walkPitch = 0;
+let walkPos = new THREE.Vector3(2.5, 0, -3);
+const walkSpeed = 0.04;
+const walkClimbSpeed = 0.025;
+const walkKeys = { w: false, a: false, s: false, d: false };
+let walkPointerLocked = false;
+
+// Physics state
+const WALK_GRAVITY = 0.006;
+let walkVelY = 0; // vertical velocity
+let walkState = 'ground'; // 'ground' | 'floor2' | 'climbing' | 'falling'
+
+// Character dimensions (child ~120cm tall)
+const CHAR_HEIGHT = 1.20;
+const CHAR_HEAD_R = 0.12;
+const CHAR_BODY_R = 0.08;
+const CHAR_BODY_H = 0.50;
+const CHAR_LEG_R = 0.05;
+const CHAR_LEG_H = 0.45;
+const CHAR_ARM_R = 0.04;
+const CHAR_ARM_H = 0.35;
+
+// Ladder geometry (must match ladder.js)
+function getLadderInfo() {
+  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+  const projX = 1.0;
+  const ladderZ = -hd + CONFIG.TD * 0.5;
+  return {
+    bottomX: hw + projX,
+    bottomY: 0,
+    topX: hw,
+    topY: CONFIG.H1,
+    z: ladderZ,
+    grabRadius: 0.5, // how close you need to be to grab on
+  };
+}
+
+function createCharacter() {
+  const group = new THREE.Group();
+  group.name = 'walkCharacter';
+
+  const skinMat = new THREE.MeshStandardMaterial({ color: '#f5c6a0', roughness: 0.8 });
+  const shirtMat = new THREE.MeshStandardMaterial({ color: '#e74c3c', roughness: 0.7 });
+  const pantsMat = new THREE.MeshStandardMaterial({ color: '#2c3e50', roughness: 0.7 });
+  const shoeMat = new THREE.MeshStandardMaterial({ color: '#5d4037', roughness: 0.9 });
+  const hairMat = new THREE.MeshStandardMaterial({ color: '#8d6e63', roughness: 0.9 });
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(CHAR_HEAD_R, 12, 8), skinMat);
+  head.position.y = CHAR_LEG_H + CHAR_BODY_H + CHAR_HEAD_R + 0.02;
+  head.castShadow = true;
+  group.add(head);
+
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(CHAR_HEAD_R * 1.05, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), hairMat);
+  hair.position.copy(head.position);
+  hair.position.y += 0.01;
+  hair.castShadow = true;
+  group.add(hair);
+
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(CHAR_BODY_R, CHAR_BODY_R * 1.1, CHAR_BODY_H, 8), shirtMat);
+  body.position.y = CHAR_LEG_H + CHAR_BODY_H / 2;
+  body.castShadow = true;
+  group.add(body);
+
+  for (let side = -1; side <= 1; side += 2) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(CHAR_LEG_R, CHAR_LEG_R, CHAR_LEG_H, 6), pantsMat);
+    leg.position.set(side * 0.06, CHAR_LEG_H / 2, 0);
+    leg.castShadow = true;
+    leg.name = side < 0 ? 'legL' : 'legR';
+    group.add(leg);
+
+    const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.14), shoeMat);
+    shoe.position.set(side * 0.06, 0.02, 0.02);
+    shoe.castShadow = true;
+    group.add(shoe);
+  }
+
+  for (let side = -1; side <= 1; side += 2) {
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(CHAR_ARM_R, CHAR_ARM_R, CHAR_ARM_H, 6), skinMat);
+    arm.position.set(side * (CHAR_BODY_R + CHAR_ARM_R + 0.02), CHAR_LEG_H + CHAR_BODY_H * 0.55, 0);
+    arm.castShadow = true;
+    arm.name = side < 0 ? 'armL' : 'armR';
+    group.add(arm);
+  }
+
+  return group;
+}
+
+// Walking / climbing animation
+let walkTime = 0;
+function animateCharacter(isMoving) {
+  if (!walkChar) return;
+
+  const legL = walkChar.getObjectByName('legL');
+  const legR = walkChar.getObjectByName('legR');
+  const armL = walkChar.getObjectByName('armL');
+  const armR = walkChar.getObjectByName('armR');
+
+  if (walkState === 'climbing') {
+    // Climbing animation — alternating reach
+    if (isMoving) walkTime += 0.10;
+    else walkTime *= 0.9;
+    const swing = Math.sin(walkTime) * 0.5;
+    if (legL && legR) { legL.rotation.x = swing; legR.rotation.x = -swing; }
+    if (armL && armR) { armL.rotation.x = -swing * 1.2; armR.rotation.x = swing * 1.2; }
+  } else {
+    // Normal walk
+    if (isMoving) walkTime += 0.12;
+    else walkTime *= 0.9;
+    const swing = Math.sin(walkTime) * 0.4;
+    if (legL && legR) { legL.rotation.x = swing; legR.rotation.x = -swing; }
+    if (armL && armR) { armL.rotation.x = -swing * 0.75; armR.rotation.x = swing * 0.75; }
+  }
+}
+
+// Check if position is on the 2nd floor footprint
+function isOnFloor2(px, pz) {
+  const hw = CONFIG.W / 2;
+  const hd = CONFIG.D / 2;
+  const margin = 0.05;
+  return px > -hw + margin && px < hw - margin && pz > -hd + margin && pz < hd - margin;
+}
+
+// Get the floor height at a given position
+function getFloorHeight(px, pz, currentY) {
+  const hw = CONFIG.W / 2;
+  const hd = CONFIG.D / 2;
+
+  // If character is above H1 level and on the 2nd floor footprint → floor2
+  if (currentY >= CONFIG.H1 - 0.1 && isOnFloor2(px, pz)) {
+    return CONFIG.H1;
+  }
+
+  // Ground level everywhere else
+  return 0;
+}
+
+function enterWalkMode() {
+  walkModeOn = true;
+  walkState = 'ground';
+  walkVelY = 0;
+
+  if (!walkChar) walkChar = createCharacter();
+  scene.add(walkChar);
+
+  walkChar.position.copy(walkPos);
+  walkChar.position.y = 0;
+  walkChar.rotation.x = 0;
+  walkChar.rotation.z = 0;
+
+  walkYaw = 0;
+  walkPitch = 0.3;
+
+  updateWalkCamera();
+  document.getElementById('walk-hint').style.display = 'block';
+  document.getElementById('controls-hint').style.display = 'none';
+  document.getElementById('view-presets').style.display = 'none';
+  document.getElementById('toggles').style.display = 'none';
+}
+
+function exitWalkMode() {
+  walkModeOn = false;
+  if (walkChar) {
+    walkPos.copy(walkChar.position);
+    scene.remove(walkChar);
+  }
+  walkPointerLocked = false;
+  document.exitPointerLock && document.exitPointerLock();
+  document.getElementById('walk-hint').style.display = 'none';
+
+  activeCamera = perspCamera;
+  perspCamera.position.set(walkPos.x + 4, walkPos.y + 3, walkPos.z - 4);
+  orbitTarget.set(walkPos.x, 1.5, walkPos.z);
+  perspCamera.lookAt(orbitTarget);
+  updateOrbit();
+
+  if (currentView === '3d') {
+    document.getElementById('controls-hint').style.display = 'block';
+    document.getElementById('view-presets').style.display = 'flex';
+    document.getElementById('toggles').style.display = 'flex';
+  }
+}
+
+function updateWalkCamera() {
+  if (!walkChar || !walkModeOn) return;
+
+  // In climbing mode, face the ladder (towards -X, looking at the wall)
+  if (walkState !== 'climbing') {
+    walkChar.rotation.y = walkYaw;
+    walkChar.rotation.x = 0;
+    walkChar.rotation.z = 0;
+  }
+
+  const camDist = 2.5;
+  const camHeight = 1.4;
+  const cx = walkChar.position.x - Math.sin(walkYaw) * camDist * Math.cos(walkPitch);
+  const cy = walkChar.position.y + camHeight + Math.sin(walkPitch) * camDist * 0.5;
+  const cz = walkChar.position.z - Math.cos(walkYaw) * camDist * Math.cos(walkPitch);
+
+  perspCamera.position.set(cx, cy, cz);
+
+  const lookY = walkChar.position.y + CHAR_HEIGHT * 0.85;
+  perspCamera.lookAt(walkChar.position.x, lookY, walkChar.position.z);
+  activeCamera = perspCamera;
+}
+
+function updateWalkMovement() {
+  if (!walkModeOn || !walkChar) return;
+
+  let moveX = 0, moveZ = 0;
+  if (walkKeys.w) moveZ += 1;
+  if (walkKeys.s) moveZ -= 1;
+  if (walkKeys.a) moveX += 1;
+  if (walkKeys.d) moveX -= 1;
+
+  const isMoving = moveX !== 0 || moveZ !== 0;
+  const ladder = getLadderInfo();
+  const px = walkChar.position.x;
+  const py = walkChar.position.y;
+  const pz = walkChar.position.z;
+
+  // Distance to ladder (in XZ plane)
+  const distToLadderBase = Math.sqrt(
+    Math.pow(px - ladder.bottomX, 2) + Math.pow(pz - ladder.z, 2)
+  );
+  const distToLadderTop = Math.sqrt(
+    Math.pow(px - ladder.topX, 2) + Math.pow(pz - ladder.z, 2)
+  );
+
+  // ---- STATE: CLIMBING ----
+  if (walkState === 'climbing') {
+    let climbDir = 0;
+    if (walkKeys.w) climbDir += 1;  // up
+    if (walkKeys.s) climbDir -= 1;  // down
+
+    if (climbDir !== 0) {
+      // Progress along ladder (0 = bottom, 1 = top)
+      const t = (py - ladder.bottomY) / (ladder.topY - ladder.bottomY);
+      const newT = Math.max(0, Math.min(1, t + climbDir * walkClimbSpeed / (ladder.topY - ladder.bottomY)));
+
+      // Interpolate position along ladder
+      walkChar.position.x = ladder.bottomX + (ladder.topX - ladder.bottomX) * newT;
+      walkChar.position.y = ladder.bottomY + (ladder.topY - ladder.bottomY) * newT;
+
+      // Reached top → step onto floor 2
+      if (newT >= 1.0) {
+        walkState = 'floor2';
+        walkChar.position.y = CONFIG.H1;
+        walkChar.position.x = ladder.topX - 0.3; // step inward
+        walkChar.rotation.x = 0;
+        walkChar.rotation.z = 0;
+      }
+      // Reached bottom → back to ground
+      if (newT <= 0.0) {
+        walkState = 'ground';
+        walkChar.position.y = 0;
+        walkChar.position.x = ladder.bottomX;
+        walkChar.rotation.x = 0;
+        walkChar.rotation.z = 0;
+      }
+    }
+
+    // Face the wall while climbing
+    walkChar.rotation.y = -Math.PI / 2; // face -X (towards the wall)
+
+    animateCharacter(climbDir !== 0);
+    updateWalkCamera();
+    return;
+  }
+
+  // ---- STATE: FALLING ----
+  if (walkState === 'falling') {
+    walkVelY -= WALK_GRAVITY;
+    walkChar.position.y += walkVelY;
+
+    // Check landing
+    const floorH = getFloorHeight(px, pz, py);
+    if (walkChar.position.y <= floorH) {
+      walkChar.position.y = floorH;
+      walkVelY = 0;
+      walkState = floorH >= CONFIG.H1 - 0.1 ? 'floor2' : 'ground';
+    }
+
+    // Still allow horizontal movement while falling
+    if (isMoving) {
+      const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
+      moveX /= len; moveZ /= len;
+      const sinY = Math.sin(walkYaw), cosY = Math.cos(walkYaw);
+      walkChar.position.x += (sinY * moveZ + cosY * moveX) * walkSpeed * 0.5;
+      walkChar.position.z += (cosY * moveZ - sinY * moveX) * walkSpeed * 0.5;
+    }
+
+    walkChar.position.x = Math.max(-10, Math.min(10, walkChar.position.x));
+    walkChar.position.z = Math.max(-10, Math.min(10, walkChar.position.z));
+
+    animateCharacter(false);
+    updateWalkCamera();
+    return;
+  }
+
+  // ---- STATE: GROUND or FLOOR2 ----
+
+  // Check if near ladder and can grab on
+  if (walkState === 'ground' && walkKeys.w && distToLadderBase < ladder.grabRadius && py < 0.3) {
+    // Grab the ladder from the bottom
+    walkState = 'climbing';
+    walkChar.position.set(ladder.bottomX, ladder.bottomY, ladder.z);
+    animateCharacter(true);
+    updateWalkCamera();
+    return;
+  }
+
+  if (walkState === 'floor2' && walkKeys.s && distToLadderTop < ladder.grabRadius) {
+    // Grab the ladder from the top
+    walkState = 'climbing';
+    walkChar.position.set(ladder.topX, ladder.topY, ladder.z);
+    animateCharacter(true);
+    updateWalkCamera();
+    return;
+  }
+
+  if (isMoving) {
+    const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
+    moveX /= len; moveZ /= len;
+
+    const sinY = Math.sin(walkYaw), cosY = Math.cos(walkYaw);
+    const newX = walkChar.position.x + (sinY * moveZ + cosY * moveX) * walkSpeed;
+    const newZ = walkChar.position.z + (cosY * moveZ - sinY * moveX) * walkSpeed;
+
+    // Check if still on current floor after move
+    if (walkState === 'floor2') {
+      if (!isOnFloor2(newX, newZ)) {
+        // Walked off the edge → fall!
+        walkState = 'falling';
+        walkVelY = 0;
+        walkChar.position.x = newX;
+        walkChar.position.z = newZ;
+      } else {
+        walkChar.position.x = newX;
+        walkChar.position.z = newZ;
+        walkChar.position.y = CONFIG.H1;
+      }
+    } else {
+      // Ground — free movement
+      walkChar.position.x = newX;
+      walkChar.position.z = newZ;
+      walkChar.position.y = 0;
+    }
+
+    walkChar.position.x = Math.max(-10, Math.min(10, walkChar.position.x));
+    walkChar.position.z = Math.max(-10, Math.min(10, walkChar.position.z));
+  }
+
+  animateCharacter(isMoving);
+  updateWalkCamera();
+}
+
+// Keyboard handlers for walk mode
+window.addEventListener('keydown', e => {
+  if (!walkModeOn) return;
+  const key = e.key.toLowerCase();
+  if (key in walkKeys) {
+    walkKeys[key] = true;
+    e.preventDefault();
+  }
+  if (key === 'escape') {
+    document.getElementById('toggle-walk').click();
+  }
+});
+
+window.addEventListener('keyup', e => {
+  if (!walkModeOn) return;
+  const key = e.key.toLowerCase();
+  if (key in walkKeys) walkKeys[key] = false;
+});
+
+// Mouse look (pointer lock)
+renderer.domElement.addEventListener('click', () => {
+  if (walkModeOn && !walkPointerLocked) {
+    renderer.domElement.requestPointerLock();
+  }
+});
+
+document.addEventListener('pointerlockchange', () => {
+  walkPointerLocked = document.pointerLockElement === renderer.domElement;
+});
+
+document.addEventListener('mousemove', e => {
+  if (!walkModeOn || !walkPointerLocked) return;
+  walkYaw -= e.movementX * 0.003;
+  walkPitch -= e.movementY * 0.003;
+  walkPitch = Math.max(-0.3, Math.min(1.0, walkPitch));
 });
 
 // ============================================================
@@ -2179,7 +2677,6 @@ function buildScene() {
   playhouse.add(createRailing());
   playhouse.add(createSlide());
   playhouse.add(createLadder());
-  playhouse.add(createLabels());
   playhouse.add(createDimensions());
 
   // Enable shadows and apply clipping plane to playhouse meshes
@@ -2230,6 +2727,8 @@ const axisCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 10);
 // ============================================================
 function animate() {
   requestAnimationFrame(animate);
+  // Walk mode movement update
+  if (walkModeOn) updateWalkMovement();
   if (currentView === '3d' && composer && !composerFailed) {
     composer.passes[0].camera = activeCamera;
     try { composer.render(); } catch (e) { composerFailed = true; renderer.render(scene, activeCamera); }

@@ -2,8 +2,6 @@
 // Toggles
 // ============================================================
 let wireframeOn = false;
-let labelsOn = false;
-
 document.getElementById('toggle-wire').addEventListener('click', function () {
   wireframeOn = !wireframeOn;
   this.classList.toggle('on', wireframeOn);
@@ -14,19 +12,23 @@ document.getElementById('toggle-wire').addEventListener('click', function () {
   });
 });
 
-document.getElementById('toggle-labels').addEventListener('click', function () {
-  labelsOn = !labelsOn;
-  this.classList.toggle('on', labelsOn);
-  const labelsGroup = playhouse.getObjectByName('labels');
-  if (labelsGroup) labelsGroup.visible = labelsOn;
-});
-
 let dimsOn = false;
 document.getElementById('toggle-dims').addEventListener('click', function () {
   dimsOn = !dimsOn;
   this.classList.toggle('on', dimsOn);
   const dimsGroup = playhouse.getObjectByName('dimensions');
   if (dimsGroup) dimsGroup.visible = dimsOn;
+});
+
+document.getElementById('toggle-walk').addEventListener('click', function () {
+  if (currentView !== '3d') return;
+  const entering = !walkModeOn;
+  this.classList.toggle('on', entering);
+  if (entering) {
+    enterWalkMode();
+  } else {
+    exitWalkMode();
+  }
 });
 
 // ============================================================

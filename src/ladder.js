@@ -23,17 +23,17 @@ function createLadder() {
   // Skupinka postavena svisle (podél +Y), pak rotována
   const ladderGroup = new THREE.Group();
 
-  // Dvě boční lišty
+  // Dvě boční lišty (bílé)
   [-1, 1].forEach(side => {
-    const rail = box(0.05, LH, 0.05, MAT.ladder);
+    const rail = box(0.05, LH, 0.05, MAT.walls);
     rail.position.set(0, LH / 2, side * LW / 2);
     ladderGroup.add(rail);
   });
 
-  // Příčle
+  // Příčle (dřevěné)
   for (let i = 0; i < CONFIG.LADDER_RUNGS; i++) {
     const t = (i + 0.5) / CONFIG.LADDER_RUNGS;
-    const rung = box(0.04, 0.04, LW, MAT.ladder);
+    const rung = box(0.04, 0.04, LW, MAT.posts);
     rung.position.set(0, LH * t, 0);
     ladderGroup.add(rung);
   }

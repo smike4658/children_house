@@ -235,21 +235,23 @@ function drawDimensions(view) {
 
   // ---- PUDORYS 1. PATRO ----
   if (view === 'floor1') {
-    var tl = ws(-hw, 0, hd);   // top-left (zadni-levy)
-    var tr = ws(hw, 0, hd);    // top-right (zadni-pravy)
-    var bl = ws(-hw, 0, -hd);  // bottom-left (predni-levy)
-    var br = ws(hw, 0, -hd);   // bottom-right (predni-pravy)
+    // Kamera je nad domem, přední strana (-Z) je nahoře (malé screen Y),
+    // zadní strana (+Z) je dole (velké screen Y).
+    var tl = ws(-hw, 0, hd);   // screen dolů-vlevo (zadní-levý)
+    var tr = ws(hw, 0, hd);    // screen dolů-vpravo (zadní-pravý)
+    var bl = ws(-hw, 0, -hd);  // screen nahoru-vlevo (přední-levý)
+    var br = ws(hw, 0, -hd);   // screen nahoru-vpravo (přední-pravý)
 
-    // Sirka 310 cm (dole)
-    dimLineH(bl, br, bl.y, br.y, bl.y + ROW2);
-    drawDimText('310 cm', (bl.x + br.x) / 2, bl.y + ROW2, false);
+    // Sirka 310 cm — pod zadní hranou budovy (mimo budovu dole)
+    dimLineH(bl, br, tl.y, tr.y, tl.y + ROW2);
+    drawDimText('310 cm', (bl.x + br.x) / 2, tl.y + ROW2, false);
 
     // Hloubka 242 cm (vpravo)
     dimLineV(br, tr, br.x, tr.x, br.x + ROW2);
     drawDimText('242 cm', br.x + ROW2, (br.y + tr.y) / 2, true);
 
     // Popisek
-    drawAreaLabel('PRIZEMI — otevreno vpredu a vlevo', (tl.x + br.x) / 2, (tl.y + bl.y) / 2, null);
+    drawAreaLabel('PRIZEMI — otevreno vpredu', (tl.x + br.x) / 2, (tl.y + bl.y) / 2, null);
   }
 
   // ---- PUDORYS 2. PATRO ----
@@ -261,9 +263,9 @@ function drawDimensions(view) {
     var divR = ws(hw, 0, divZ);   // delici cara vpravo
     var divL = ws(-hw, 0, divZ);  // delici cara vlevo
 
-    // Sirka 310 cm (dole)
-    dimLineH(bl, br, bl.y, br.y, bl.y + ROW2);
-    drawDimText('310 cm', (bl.x + br.x) / 2, bl.y + ROW2, false);
+    // Sirka 310 cm — pod zadní hranou budovy (mimo budovu dole)
+    dimLineH(bl, br, tl.y, tr.y, tl.y + ROW2);
+    drawDimText('310 cm', (bl.x + br.x) / 2, tl.y + ROW2, false);
 
     // Hloubka celkova 242 cm (vpravo, rada 2)
     dimLineV(br, tr, br.x, tr.x, br.x + ROW2);
@@ -309,6 +311,25 @@ function drawDimensions(view) {
     // Hreben +45 cm (vlevo, rada 2)
     dimLineV(tlTop, tlPeak, tlTop.x, tlPeak.x, tlTop.x - ROW2);
     drawDimText('+45 cm', tlTop.x - ROW2, (tlTop.y + tlPeak.y) / 2, true);
+
+    // Zabradli 90 cm (vpravo, rada 1)
+    var railBot = ws(hw, CONFIG.H1, -hd);
+    var railTop = ws(hw, CONFIG.H1 + CONFIG.RAIL_H, -hd);
+    dimLineV(railBot, railTop, railBot.x, railTop.x, railBot.x + ROW1);
+    drawDimText('90 cm', railBot.x + ROW1, (railBot.y + railTop.y) / 2, true);
+
+    // Dvere 55x110 cm (kotovane v pohledu)
+    var doorX = -hw + CONFIG.DOOR_W / 2 + CONFIG.DOOR_OFFSET_X + 0.15;
+    var doorBot = ws(doorX, CONFIG.H1, divZ);
+    var doorTop = ws(doorX, CONFIG.H1 + CONFIG.DOOR_H, divZ);
+    drawAreaLabel('dvere 55x110', doorBot.x, (doorBot.y + doorTop.y) / 2, null);
+
+    // Okno predni steny
+    var doorRE = doorX + CONFIG.DOOR_W / 2;
+    var winCX = doorRE + (hw - doorRE) / 2;
+    var winCY = CONFIG.H1 + (CONFIG.H - CONFIG.H1) / 2;
+    var winP = ws(winCX, winCY, divZ);
+    drawAreaLabel('okno 50x45', winP.x, winP.y, null);
 
     // Popisky
     drawAreaLabel('PRIZEMI (otevreno)', (bl.x + br.x) / 2, (bl.y + tlMid.y) / 2, null);
