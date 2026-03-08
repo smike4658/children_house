@@ -127,7 +127,8 @@ function createWalls() {
 
   // 2. patro levá stěna s oknem — pouze kabina (ne terasa)
   const r2H = CONFIG.H - CONFIG.H1;
-  const win2 = { x: 0, y: r2H / 2, w: CONFIG.SIDE_WIN_W, h: CONFIG.SIDE_WIN_H };
+  const win2Y = 0.50 + CONFIG.SIDE_WIN_H / 2; // Bottom sill at 0.50m from floor
+  const win2 = { x: 0, y: win2Y, w: CONFIG.SIDE_WIN_W, h: CONFIG.SIDE_WIN_H };
   const left2 = wallWithHole(CONFIG.CD, r2H, win2.x, win2.y, win2.w, win2.h, T, CONFIG.H1); // offset = H1
   left2.rotation.y = Math.PI / 2;
   left2.position.set(-hw - T / 2, CONFIG.H1, divZ + CONFIG.CD / 2);
@@ -150,8 +151,8 @@ function createWalls() {
   const doorRightEdge = doorX + CONFIG.DOOR_W / 2;
   const winX = doorRightEdge + (CONFIG.W / 2 - doorRightEdge) / 2;
 
-  // Pozice Y = střed původní zdi (0.75 m od podlahy přidáme H1)
-  const holeY = (CONFIG.H - CONFIG.H1) / 2;
+  // Pozice Y okna (0.50 m od podlahy spodní hrana, plus polovina výšky)
+  const holeY = 0.50 + CONFIG.FRONT_WIN_H / 2;
 
   const holes = [
     { x: doorX, y: CONFIG.DOOR_H / 2, w: CONFIG.DOOR_W, h: CONFIG.DOOR_H },

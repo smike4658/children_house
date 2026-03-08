@@ -12,14 +12,6 @@ document.getElementById('toggle-wire').addEventListener('click', function () {
   });
 });
 
-let dimsOn = false;
-document.getElementById('toggle-dims').addEventListener('click', function () {
-  dimsOn = !dimsOn;
-  this.classList.toggle('on', dimsOn);
-  const dimsGroup = playhouse.getObjectByName('dimensions');
-  if (dimsGroup) dimsGroup.visible = dimsOn;
-});
-
 document.getElementById('toggle-walk').addEventListener('click', function () {
   if (currentView !== '3d') return;
   const entering = !walkModeOn;

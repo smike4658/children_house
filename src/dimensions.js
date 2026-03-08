@@ -1,115 +1,4 @@
 // ============================================================
-// 3D Dimensions — rozmerove cary ve 3D scene (toggle)
-// ============================================================
-function makeDimLabel(text) {
-  const c = document.createElement('canvas');
-  c.width = 192; c.height = 48;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = 'rgba(20,25,15,0.85)';
-  if (ctx.roundRect) ctx.roundRect(2, 2, c.width - 4, c.height - 4, 4);
-  else ctx.fillRect(2, 2, c.width - 4, c.height - 4);
-  ctx.fill();
-  ctx.strokeStyle = '#5a6a4a';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.fillStyle = '#e8dcc0';
-  ctx.font = 'bold 16px Segoe UI, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(text, c.width / 2, c.height / 2);
-  const tex = new THREE.CanvasTexture(c);
-  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
-  const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(0.8, 0.2, 1);
-  return sprite;
-}
-
-function makeDimLine(p1, p2, offset, label) {
-  const group = new THREE.Group();
-
-  const o1 = p1.clone().add(offset);
-  const o2 = p2.clone().add(offset);
-
-  // Extension lines
-  const extOffset = offset.clone().normalize().multiplyScalar(0.05);
-  const extMat = new THREE.LineBasicMaterial({ color: 0x8a9a72, transparent: true, opacity: 0.5 });
-  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1.clone().add(extOffset), o1]), extMat));
-  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p2.clone().add(extOffset), o2]), extMat));
-
-  // Main dimension line
-  const mainMat = new THREE.LineBasicMaterial({ color: 0x8a9a72 });
-  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([o1, o2]), mainMat));
-
-  // Ticks at ends
-  const tickLen = 0.06;
-  const perp = offset.clone().normalize().multiplyScalar(tickLen);
-  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([o1.clone().add(perp), o1.clone().sub(perp)]), mainMat));
-  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([o2.clone().add(perp), o2.clone().sub(perp)]), mainMat));
-
-  // Label at midpoint
-  const lbl = makeDimLabel(label);
-  lbl.position.copy(o1.clone().add(o2).multiplyScalar(0.5));
-  group.add(lbl);
-
-  return group;
-}
-
-function createDimensions() {
-  const g = new THREE.Group();
-  g.name = 'dimensions';
-  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
-  const divZ = -hd + CONFIG.TD;
-
-  // Celkova sirka (dole, predni strana)
-  g.add(makeDimLine(
-    new THREE.Vector3(-hw, 0, -hd),
-    new THREE.Vector3(hw, 0, -hd),
-    new THREE.Vector3(0, 0, -0.4),
-    '310 cm'
-  ));
-
-  // Celkova hloubka (dole, prava strana)
-  g.add(makeDimLine(
-    new THREE.Vector3(hw, 0, -hd),
-    new THREE.Vector3(hw, 0, hd),
-    new THREE.Vector3(0.4, 0, 0),
-    '242 cm'
-  ));
-
-
-  // Terasa vs kabina (prava strana, uroven 2. patra)
-  g.add(makeDimLine(
-    new THREE.Vector3(hw, CONFIG.H1, -hd),
-    new THREE.Vector3(hw, CONFIG.H1, divZ),
-    new THREE.Vector3(0.5, 0, 0),
-    '70 cm'
-  ));
-  g.add(makeDimLine(
-    new THREE.Vector3(hw, CONFIG.H1, divZ),
-    new THREE.Vector3(hw, CONFIG.H1, hd),
-    new THREE.Vector3(0.5, 0, 0),
-    '172 cm'
-  ));
-
-  // Pískoviště
-  g.add(makeDimLine(
-    new THREE.Vector3(hw, 0, hd),
-    new THREE.Vector3(hw + 1.40, 0, hd),
-    new THREE.Vector3(0, 0, 0.4),
-    '140 cm'
-  ));
-  g.add(makeDimLine(
-    new THREE.Vector3(hw + 1.40, 0, hd - 1.40),
-    new THREE.Vector3(hw + 1.40, 0, hd),
-    new THREE.Vector3(0.4, 0, 0),
-    '140 cm'
-  ));
-
-  g.visible = false;
-  return g;
-}
-
-// ============================================================
 // 2D Koty — canvas overlay se sipkami a extension lines
 // ============================================================
 function drawDimensions(view) {
@@ -400,11 +289,9 @@ function drawDimensions(view) {
     dimLineV(leftBot, leftTop, leftBot.x, leftTop.x, leftBot.x - ROW2);
     drawDimText('300 cm', leftBot.x - ROW2, (leftBot.y + leftTop.y) / 2, true);
 
-    // Hreben +45 cm
-    var leftPeak = frontBot.x < backBot.x ? ws(hx+hw, CONFIG.H + CONFIG.ROOF_PEAK, -hd) : backPeak;
-    // Hreben je vzadu, takze pouzijeme backTop a backPeak
-    dimLineV(backTop, backPeak, backTop.x, backPeak.x, Math.max(backTop.x, backPeak.x) + ROW1);
-    drawDimText('+45 cm', Math.max(backTop.x, backPeak.x) + ROW1, (backTop.y + backPeak.y) / 2, true);
+    // Hreben +45 cm (vlevo, navazuje na 300 cm)
+    dimLineV(backTop, backPeak, backTop.x, backPeak.x, leftBot.x - ROW1);
+    drawDimText('+45 cm', leftBot.x - ROW1, (backTop.y + backPeak.y) / 2, true);
 
     // Popisky
     drawAreaLabel('PRIZEMI', (leftBot.x + rightBot.x) / 2, (leftBot.y + leftMid.y) / 2, null);

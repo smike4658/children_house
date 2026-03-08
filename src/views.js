@@ -27,11 +27,9 @@ function switchView(view) {
 
   sectionPlane.constant = 1000; // default: no clipping
 
-  // Obnovit viditelnost všech objektů před přepnutím (kromě dimensions — ty řídí toggle)
+  // Obnovit viditelnost všech objektů před přepnutím
   playhouse.traverse(c => {
-    if (c.name !== 'dimensions' && c.parent && c.parent.name !== 'dimensions') {
-      c.visible = true;
-    }
+    c.visible = true;
   });
 
   // Vedlejší assety (pískoviště, houpačka, okolí) — jen v 3D pohledu
@@ -131,7 +129,7 @@ function setupOrthoView(pos, target, left, right, top, bottom) {
 // View Presets (3D)
 // ============================================================
 const VIEW_PRESETS = {
-  iso: { pos: [6, 4, -6], target: [0, 1.5, 0] },
+  iso: { pos: [CONFIG.HOUSE_X + 6, 4, -6], target: [CONFIG.HOUSE_X, 1.5, 0] },
   front: { pos: [CONFIG.HOUSE_X, 2, -8], target: [CONFIG.HOUSE_X, 1.5, 0] },
   back: { pos: [CONFIG.HOUSE_X, 2, 8], target: [CONFIG.HOUSE_X, 1.5, 0] },
   left: { pos: [CONFIG.HOUSE_X - 8, 2, 0], target: [CONFIG.HOUSE_X, 1.5, 0] },

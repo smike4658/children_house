@@ -24,8 +24,6 @@ function buildScene() {
   playhouse.add(createSandbox());
   scene.add(createSurroundings());
   scene.add(createSwing());
-  playhouse.add(createDimensions());
-
   // Enable shadows and apply clipping plane to playhouse meshes
   playhouse.traverse(c => {
     if (c.isMesh) {

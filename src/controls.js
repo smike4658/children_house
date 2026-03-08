@@ -1,7 +1,7 @@
 // ============================================================
 // OrbitControls — custom implementation
 // ============================================================
-const orbitTarget = new THREE.Vector3(0, 1.5, 0);
+const orbitTarget = new THREE.Vector3(CONFIG.HOUSE_X, 1.5, 0);
 let isDragging = false, isRightDrag = false;
 let lastMouse = { x: 0, y: 0 };
 let spherical = new THREE.Spherical();

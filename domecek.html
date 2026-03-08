@@ -374,9 +374,6 @@
       <div class="toggle-btn" id="toggle-wire">
         <div class="toggle-dot"></div>Drátový model
       </div>
-      <div class="toggle-btn" id="toggle-dims">
-        <div class="toggle-dot"></div>Kóty
-      </div>
       <div class="toggle-btn" id="toggle-walk">
         <div class="toggle-dot"></div>Procházka
       </div>
@@ -426,9 +423,9 @@ const CONFIG = {
   DOOR_H: 1.25,
   DOOR_OFFSET_X: 0.15,
   SIDE_WIN_W: 0.60,
-  SIDE_WIN_H: 0.50,
+  SIDE_WIN_H: 0.75,
   FRONT_WIN_W: 0.80,
-  FRONT_WIN_H: 0.50,
+  FRONT_WIN_H: 0.75,
   SLIDE_LEN: 2.60,
   SLIDE_W: 0.42,
   STAIRS_W: 0.62,
@@ -479,8 +476,8 @@ const scene = new THREE.Scene();
 // Cameras
 // ============================================================
 const perspCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-perspCamera.position.set(6, 4, -6);
-perspCamera.lookAt(0, 1.5, 0);
+perspCamera.position.set(CONFIG.HOUSE_X + 6, 4, -6);
+perspCamera.lookAt(CONFIG.HOUSE_X, 1.5, 0);
 
 let orthoCamera = null;
 let activeCamera = perspCamera;
@@ -1046,7 +1043,8 @@ function createWalls() {
 
   // 2. patro levá stěna s oknem — pouze kabina (ne terasa)
   const r2H = CONFIG.H - CONFIG.H1;
-  const win2 = { x: 0, y: r2H / 2, w: CONFIG.SIDE_WIN_W, h: CONFIG.SIDE_WIN_H };
+  const win2Y = 0.50 + CONFIG.SIDE_WIN_H / 2; // Bottom sill at 0.50m from floor
+  const win2 = { x: 0, y: win2Y, w: CONFIG.SIDE_WIN_W, h: CONFIG.SIDE_WIN_H };
   const left2 = wallWithHole(CONFIG.CD, r2H, win2.x, win2.y, win2.w, win2.h, T, CONFIG.H1); // offset = H1
   left2.rotation.y = Math.PI / 2;
   left2.position.set(-hw - T / 2, CONFIG.H1, divZ + CONFIG.CD / 2);
@@ -1069,8 +1067,8 @@ function createWalls() {
   const doorRightEdge = doorX + CONFIG.DOOR_W / 2;
   const winX = doorRightEdge + (CONFIG.W / 2 - doorRightEdge) / 2;
 
-  // Pozice Y = střed původní zdi (0.75 m od podlahy přidáme H1)
-  const holeY = (CONFIG.H - CONFIG.H1) / 2;
+  // Pozice Y okna (0.50 m od podlahy spodní hrana, plus polovina výšky)
+  const holeY = 0.50 + CONFIG.FRONT_WIN_H / 2;
 
   const holes = [
     { x: doorX, y: CONFIG.DOOR_H / 2, w: CONFIG.DOOR_W, h: CONFIG.DOOR_H },
@@ -1677,117 +1675,6 @@ function createSwing() {
 }
 
 // ============================================================
-// 3D Dimensions — rozmerove cary ve 3D scene (toggle)
-// ============================================================
-function makeDimLabel(text) {
-  const c = document.createElement('canvas');
-  c.width = 192; c.height = 48;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = 'rgba(20,25,15,0.85)';
-  if (ctx.roundRect) ctx.roundRect(2, 2, c.width - 4, c.height - 4, 4);
-  else ctx.fillRect(2, 2, c.width - 4, c.height - 4);
-  ctx.fill();
-  ctx.strokeStyle = '#5a6a4a';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.fillStyle = '#e8dcc0';
-  ctx.font = 'bold 16px Segoe UI, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(text, c.width / 2, c.height / 2);
-  const tex = new THREE.CanvasTexture(c);
-  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
-  const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(0.8, 0.2, 1);
-  return sprite;
-}
-
-function makeDimLine(p1, p2, offset, label) {
-  const group = new THREE.Group();
-
-  const o1 = p1.clone().add(offset);
-  const o2 = p2.clone().add(offset);
-
-  // Extension lines
-  const extOffset = offset.clone().normalize().multiplyScalar(0.05);
-  const extMat = new THREE.LineBasicMaterial({ color: 0x8a9a72, transparent: true, opacity: 0.5 });
-  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p1.clone().add(extOffset), o1]), extMat));
-  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([p2.clone().add(extOffset), o2]), extMat));
-
-  // Main dimension line
-  const mainMat = new THREE.LineBasicMaterial({ color: 0x8a9a72 });
-  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([o1, o2]), mainMat));
-
-  // Ticks at ends
-  const tickLen = 0.06;
-  const perp = offset.clone().normalize().multiplyScalar(tickLen);
-  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([o1.clone().add(perp), o1.clone().sub(perp)]), mainMat));
-  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([o2.clone().add(perp), o2.clone().sub(perp)]), mainMat));
-
-  // Label at midpoint
-  const lbl = makeDimLabel(label);
-  lbl.position.copy(o1.clone().add(o2).multiplyScalar(0.5));
-  group.add(lbl);
-
-  return group;
-}
-
-function createDimensions() {
-  const g = new THREE.Group();
-  g.name = 'dimensions';
-  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
-  const divZ = -hd + CONFIG.TD;
-
-  // Celkova sirka (dole, predni strana)
-  g.add(makeDimLine(
-    new THREE.Vector3(-hw, 0, -hd),
-    new THREE.Vector3(hw, 0, -hd),
-    new THREE.Vector3(0, 0, -0.4),
-    '310 cm'
-  ));
-
-  // Celkova hloubka (dole, prava strana)
-  g.add(makeDimLine(
-    new THREE.Vector3(hw, 0, -hd),
-    new THREE.Vector3(hw, 0, hd),
-    new THREE.Vector3(0.4, 0, 0),
-    '242 cm'
-  ));
-
-
-  // Terasa vs kabina (prava strana, uroven 2. patra)
-  g.add(makeDimLine(
-    new THREE.Vector3(hw, CONFIG.H1, -hd),
-    new THREE.Vector3(hw, CONFIG.H1, divZ),
-    new THREE.Vector3(0.5, 0, 0),
-    '70 cm'
-  ));
-  g.add(makeDimLine(
-    new THREE.Vector3(hw, CONFIG.H1, divZ),
-    new THREE.Vector3(hw, CONFIG.H1, hd),
-    new THREE.Vector3(0.5, 0, 0),
-    '172 cm'
-  ));
-
-  // Pískoviště
-  g.add(makeDimLine(
-    new THREE.Vector3(hw, 0, hd),
-    new THREE.Vector3(hw + 1.40, 0, hd),
-    new THREE.Vector3(0, 0, 0.4),
-    '140 cm'
-  ));
-  g.add(makeDimLine(
-    new THREE.Vector3(hw + 1.40, 0, hd - 1.40),
-    new THREE.Vector3(hw + 1.40, 0, hd),
-    new THREE.Vector3(0.4, 0, 0),
-    '140 cm'
-  ));
-
-  g.visible = false;
-  return g;
-}
-
-// ============================================================
 // 2D Koty — canvas overlay se sipkami a extension lines
 // ============================================================
 function drawDimensions(view) {
@@ -2078,11 +1965,9 @@ function drawDimensions(view) {
     dimLineV(leftBot, leftTop, leftBot.x, leftTop.x, leftBot.x - ROW2);
     drawDimText('300 cm', leftBot.x - ROW2, (leftBot.y + leftTop.y) / 2, true);
 
-    // Hreben +45 cm
-    var leftPeak = frontBot.x < backBot.x ? ws(hx+hw, CONFIG.H + CONFIG.ROOF_PEAK, -hd) : backPeak;
-    // Hreben je vzadu, takze pouzijeme backTop a backPeak
-    dimLineV(backTop, backPeak, backTop.x, backPeak.x, Math.max(backTop.x, backPeak.x) + ROW1);
-    drawDimText('+45 cm', Math.max(backTop.x, backPeak.x) + ROW1, (backTop.y + backPeak.y) / 2, true);
+    // Hreben +45 cm (vlevo, navazuje na 300 cm)
+    dimLineV(backTop, backPeak, backTop.x, backPeak.x, leftBot.x - ROW1);
+    drawDimText('+45 cm', leftBot.x - ROW1, (backTop.y + backPeak.y) / 2, true);
 
     // Popisky
     drawAreaLabel('PRIZEMI', (leftBot.x + rightBot.x) / 2, (leftBot.y + leftMid.y) / 2, null);
@@ -2173,11 +2058,9 @@ function switchView(view) {
 
   sectionPlane.constant = 1000; // default: no clipping
 
-  // Obnovit viditelnost všech objektů před přepnutím (kromě dimensions — ty řídí toggle)
+  // Obnovit viditelnost všech objektů před přepnutím
   playhouse.traverse(c => {
-    if (c.name !== 'dimensions' && c.parent && c.parent.name !== 'dimensions') {
-      c.visible = true;
-    }
+    c.visible = true;
   });
 
   // Vedlejší assety (pískoviště, houpačka, okolí) — jen v 3D pohledu
@@ -2277,7 +2160,7 @@ function setupOrthoView(pos, target, left, right, top, bottom) {
 // View Presets (3D)
 // ============================================================
 const VIEW_PRESETS = {
-  iso: { pos: [6, 4, -6], target: [0, 1.5, 0] },
+  iso: { pos: [CONFIG.HOUSE_X + 6, 4, -6], target: [CONFIG.HOUSE_X, 1.5, 0] },
   front: { pos: [CONFIG.HOUSE_X, 2, -8], target: [CONFIG.HOUSE_X, 1.5, 0] },
   back: { pos: [CONFIG.HOUSE_X, 2, 8], target: [CONFIG.HOUSE_X, 1.5, 0] },
   left: { pos: [CONFIG.HOUSE_X - 8, 2, 0], target: [CONFIG.HOUSE_X, 1.5, 0] },
@@ -2295,7 +2178,7 @@ function setPreset(name) {
 // ============================================================
 // OrbitControls — custom implementation
 // ============================================================
-const orbitTarget = new THREE.Vector3(0, 1.5, 0);
+const orbitTarget = new THREE.Vector3(CONFIG.HOUSE_X, 1.5, 0);
 let isDragging = false, isRightDrag = false;
 let lastMouse = { x: 0, y: 0 };
 let spherical = new THREE.Spherical();
@@ -2389,14 +2272,6 @@ document.getElementById('toggle-wire').addEventListener('click', function () {
       c.material.wireframe = wireframeOn;
     }
   });
-});
-
-let dimsOn = false;
-document.getElementById('toggle-dims').addEventListener('click', function () {
-  dimsOn = !dimsOn;
-  this.classList.toggle('on', dimsOn);
-  const dimsGroup = playhouse.getObjectByName('dimensions');
-  if (dimsGroup) dimsGroup.visible = dimsOn;
 });
 
 document.getElementById('toggle-walk').addEventListener('click', function () {
@@ -2570,6 +2445,114 @@ function getFloorHeight(px, pz, currentY) {
   return 0;
 }
 
+// ---- Collision system ----
+const CHAR_RADIUS = 0.15;
+
+function canMoveTo(nx, nz, cy) {
+  const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
+  const ox = CONFIG.HOUSE_X;
+  const T = CONFIG.WALL_T;
+  const P = CONFIG.POST;
+  const r = CHAR_RADIUS;
+  const divZ = CONFIG.divZ;
+
+  // Circle-vs-AABB test
+  function hits(bx1, bz1, bx2, bz2) {
+    var cx = Math.max(bx1, Math.min(nx, bx2));
+    var cz = Math.max(bz1, Math.min(nz, bz2));
+    var dx = nx - cx, dz = nz - cz;
+    return dx * dx + dz * dz < r * r;
+  }
+
+  // -- Corner posts (always, full height) --
+  var pp = P / 2;
+  if (hits(ox - hw - pp, -hd - pp, ox - hw + pp, -hd + pp)) return false; // front-left
+  if (hits(ox + hw - pp, -hd - pp, ox + hw + pp, -hd + pp)) return false; // front-right
+  if (hits(ox - hw - pp, hd - pp, ox - hw + pp, hd + pp)) return false;   // back-left
+  if (hits(ox + hw - pp, hd - pp, ox + hw + pp, hd + pp)) return false;   // back-right
+
+  // -- divZ posts (from H1 up, but also block ground walk) --
+  var dp = P * 0.85 / 2;
+  if (hits(ox - hw - dp, divZ - dp, ox - hw + dp, divZ + dp)) return false;
+  if (hits(ox + hw - dp, divZ - dp, ox + hw + dp, divZ + dp)) return false;
+
+  // -- Ground level walls --
+  if (cy < CONFIG.H1 - 0.1) {
+    // Left wall (-X, full)
+    if (hits(ox - hw - T, -hd, ox - hw, hd)) return false;
+    // Back wall (+Z)
+    if (hits(ox - hw, hd, ox + hw, hd + T)) return false;
+    // Right: NO wall on 1st floor (open between posts)
+    // Front (-Z): OPEN
+  }
+
+  // -- 2nd floor --
+  if (cy >= CONFIG.H1 - 0.1) {
+    // Back wall (+Z)
+    if (hits(ox - hw, hd, ox + hw, hd + T)) return false;
+    // Left wall cabin (-X, divZ to hd)
+    if (hits(ox - hw - T, divZ, ox - hw, hd)) return false;
+    // Right wall cabin (+X, divZ to hd)
+    if (hits(ox + hw, divZ, ox + hw + T, hd)) return false;
+
+    // Front cabin wall (at divZ) with door opening
+    var doorX = ox + (-hw + CONFIG.DOOR_W / 2 + CONFIG.DOOR_OFFSET_X + 0.15);
+    var doorL = doorX - CONFIG.DOOR_W / 2;
+    var doorR = doorX + CONFIG.DOOR_W / 2;
+    // Wall left of door
+    if (hits(ox - hw, divZ - T, doorL, divZ)) return false;
+    // Wall right of door
+    if (hits(doorR, divZ - T, ox + hw, divZ)) return false;
+
+    // Railing front (-Z, between 2nd and 3rd posts = ox-0.93 to ox+0.93)
+    var railGapX = CONFIG.W / 5; // = 0.62 from each post
+    var railInner = hw - railGapX; // ≈ 0.93
+    if (hits(ox - railInner, -hd - T, ox + railInner, -hd)) return false;
+
+    // Railing left (-X terrace, -hd to divZ)
+    if (hits(ox - hw - T, -hd, ox - hw, divZ)) return false;
+    // Railing right (+X terrace, -hd to divZ)
+    if (hits(ox + hw, -hd, ox + hw + T, divZ)) return false;
+  }
+
+  // -- Swing frame posts --
+  var swSandboxR = ox + hw + 1.40;
+  var swLeftX = swSandboxR + 0.70;
+  var swWidth = 3.00;
+  var swJ = 0.08;
+  var swCX = swLeftX + swWidth / 2;
+  if (hits(swCX - swWidth / 2 - swJ / 2, -swJ / 2, swCX - swWidth / 2 + swJ / 2, swJ / 2)) return false;
+  if (hits(swCX + swWidth / 2 - swJ / 2, -swJ / 2, swCX + swWidth / 2 + swJ / 2, swJ / 2)) return false;
+
+  // -- Sandbox frame (low wall, only when on ground) --
+  if (cy < 0.30) {
+    var sbL = ox + hw;
+    var sbR = ox + hw + 1.40;
+    var sbB = hd;
+    var sbF = hd - 1.40;
+    var sbT = 0.04;
+    if (hits(sbL, sbB - sbT, sbR, sbB)) return false;       // back
+    if (hits(sbL, sbF, sbR, sbF + sbT)) return false;       // front
+    if (hits(sbL, sbF, sbL + sbT, sbB)) return false;       // left
+    if (hits(sbR - sbT, sbF, sbR, sbB)) return false;       // right
+  }
+
+  // -- Stairs schodnice (side stringers as thin walls) --
+  if (cy < CONFIG.H1) {
+    var stairStartX = ox + 0.93;
+    var stairEndX = ox + 0.93 + CONFIG.STAIRS_W;
+    var stairZ1 = -hd - CONFIG.STAIRS_RUN;
+    var stairZ2 = -hd;
+    var stT = 0.05;
+    // Left stringer
+    if (hits(stairStartX, stairZ1, stairStartX + stT, stairZ2)) return false;
+    // Right stringer
+    if (hits(stairEndX - stT, stairZ1, stairEndX, stairZ2)) return false;
+  }
+
+  return true;
+}
+
 function enterWalkMode() {
   walkModeOn = true;
   walkState = 'ground';
@@ -2681,13 +2664,21 @@ function updateWalkMovement() {
       walkState = floorH >= CONFIG.H1 - 0.1 ? 'floor2' : 'ground';
     }
 
-    // Still allow horizontal movement while falling
+    // Still allow horizontal movement while falling (with collision)
     if (isMoving) {
       const len = Math.sqrt(moveX * moveX + moveZ * moveZ);
       moveX /= len; moveZ /= len;
       const sinY = Math.sin(walkYaw), cosY = Math.cos(walkYaw);
-      walkChar.position.x += (sinY * moveZ + cosY * moveX) * walkSpeed * 0.5;
-      walkChar.position.z += (cosY * moveZ - sinY * moveX) * walkSpeed * 0.5;
+      const fallNewX = walkChar.position.x + (sinY * moveZ + cosY * moveX) * walkSpeed * 0.5;
+      const fallNewZ = walkChar.position.z + (cosY * moveZ - sinY * moveX) * walkSpeed * 0.5;
+      if (canMoveTo(fallNewX, fallNewZ, walkChar.position.y)) {
+        walkChar.position.x = fallNewX;
+        walkChar.position.z = fallNewZ;
+      } else if (canMoveTo(fallNewX, walkChar.position.z, walkChar.position.y)) {
+        walkChar.position.x = fallNewX;
+      } else if (canMoveTo(walkChar.position.x, fallNewZ, walkChar.position.y)) {
+        walkChar.position.z = fallNewZ;
+      }
     }
 
     walkChar.position.x = Math.max(-10, Math.min(10, walkChar.position.x));
@@ -2706,18 +2697,29 @@ function updateWalkMovement() {
     const newX = walkChar.position.x + (sinY * moveZ + cosY * moveX) * walkSpeed;
     const newZ = walkChar.position.z + (cosY * moveZ - sinY * moveX) * walkSpeed;
 
+    // Collision-checked movement with wall-slide
+    var moveOk = canMoveTo(newX, newZ, py);
+    var finalX = px, finalZ = pz;
+    if (moveOk) {
+      finalX = newX; finalZ = newZ;
+    } else if (canMoveTo(newX, pz, py)) {
+      finalX = newX; // slide along Z wall
+    } else if (canMoveTo(px, newZ, py)) {
+      finalZ = newZ; // slide along X wall
+    }
+
     // Check if still on current floor after move
     if (walkState === 'floor2') {
-      if (!isOnFloor2(newX, newZ) && !isOnStairs(newX, newZ)) {
+      if (!isOnFloor2(finalX, finalZ) && !isOnStairs(finalX, finalZ)) {
         // Walked off the edge → fall!
         walkState = 'falling';
         walkVelY = 0;
-        walkChar.position.x = newX;
-        walkChar.position.z = newZ;
+        walkChar.position.x = finalX;
+        walkChar.position.z = finalZ;
       } else {
-        walkChar.position.x = newX;
-        walkChar.position.z = newZ;
-        const newY = getFloorHeight(newX, newZ, walkChar.position.y);
+        walkChar.position.x = finalX;
+        walkChar.position.z = finalZ;
+        const newY = getFloorHeight(finalX, finalZ, walkChar.position.y);
         walkChar.position.y = newY;
         // Transition back to ground when descending stairs to ground level
         if (newY < CONFIG.H1 - 0.1) {
@@ -2726,9 +2728,9 @@ function updateWalkMovement() {
       }
     } else {
       // Ground — free movement or stairs
-      walkChar.position.x = newX;
-      walkChar.position.z = newZ;
-      walkChar.position.y = getFloorHeight(newX, newZ, walkChar.position.y);
+      walkChar.position.x = finalX;
+      walkChar.position.z = finalZ;
+      walkChar.position.y = getFloorHeight(finalX, finalZ, walkChar.position.y);
       if (walkChar.position.y >= CONFIG.H1 - 0.1) {
         walkState = 'floor2';
       }
@@ -2955,8 +2957,6 @@ function buildScene() {
   playhouse.add(createSandbox());
   scene.add(createSurroundings());
   scene.add(createSwing());
-  playhouse.add(createDimensions());
-
   // Enable shadows and apply clipping plane to playhouse meshes
   playhouse.traverse(c => {
     if (c.isMesh) {
