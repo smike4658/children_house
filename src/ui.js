@@ -1,4 +1,13 @@
 // ============================================================
+// Spec chips — dynamické rozměry z CONFIG (přízemní verze)
+// ============================================================
+document.getElementById('spec-w').textContent = (CONFIG.W * 100 | 0) + ' cm';
+document.getElementById('spec-d').textContent = (CONFIG.D * 100 | 0) + ' cm';
+document.getElementById('spec-hf').textContent = (CONFIG.H_FRONT * 100 | 0) + ' cm';
+document.getElementById('spec-hb').textContent = (CONFIG.H_BACK * 100 | 0) + ' cm';
+document.getElementById('spec-hr').textContent = (CONFIG.H_ROOF_FRONT * 100 | 0) + ' cm';
+
+// ============================================================
 // Toggles
 // ============================================================
 let wireframeOn = false;

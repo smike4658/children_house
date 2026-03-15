@@ -4,15 +4,14 @@
 function createSurroundings() {
     const g = new THREE.Group(); g.name = 'surroundings';
 
-    // Pokrývá domeček, pískoviště i houpačku.
-    // Domeček levý okraj: CONFIG.HOUSE_X - CONFIG.W/2 ≈ -5.05
-    // Houpačka pravý okraj: cca +3.15
-    const houseLeft = CONFIG.HOUSE_X - CONFIG.W / 2 - 0.5;
+    // Kamínková plocha: domeček u LEVÉHO okraje (z pohledu kamery),
+    // pískoviště a houpačka na kamínkové ploše napravo od domečku.
+    const pebbleLeft = CONFIG.HOUSE_X - CONFIG.W / 2 - 0.15; // levý okraj = u domečku
     const swingRight = CONFIG.HOUSE_X + CONFIG.W / 2 + 1.40 + 0.70 + 3.00 + 0.5;
-    const pWidth = swingRight - houseLeft;
+    const pWidth = swingRight - pebbleLeft;
     const pDepth = 2.5;
-    const pZ = 0; // střed na Z=0
-    const cX = (houseLeft + swingRight) / 2;
+    const pZ = 0;
+    const cX = (pebbleLeft + swingRight) / 2;
 
     const pebblesGeometry = new THREE.BoxGeometry(pWidth, 0.04, pDepth);
     const pebblesMesh = new THREE.Mesh(pebblesGeometry, MAT.pebbles);

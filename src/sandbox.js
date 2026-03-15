@@ -1,5 +1,5 @@
 // ============================================================
-// Sandbox — pískoviště (140x140 vpravo vzadu)
+// Sandbox — pískoviště (140x140 vlevo = +X strana)
 // ============================================================
 function createSandbox() {
     const g = new THREE.Group(); g.name = 'sandbox';
@@ -8,26 +8,21 @@ function createSandbox() {
     const h = 0.20;
     const t = 0.04;
 
-    // Pozice: navazuje na pravou stěnu (+X = hw) a lícovitě na zadní stěnu (+Z = hd)
-    const leftX = hw;
-    const rightX = hw + size;
-    const backZ = hd;
-    const frontZ = hd - size;
+    // Pozice: vlevo na obrazovce (+X), za schody plošiny (toward +Z)
+    const platBackZ = CONFIG.PLATFORM_Z + CONFIG.PLATFORM_D / 2;
+    const stairsEndZ = platBackZ + CONFIG.STAIR_COUNT * CONFIG.STAIR_DEPTH;
+    const sandboxFrontZ = stairsEndZ + 0.10;
 
-    const centerX = (leftX + rightX) / 2;
-    const centerZ = (backZ + frontZ) / 2;
+    const centerX = hw + size / 2;
+    const centerZ = sandboxFrontZ + size / 2;
 
     // Rám pískoviště
-    // Zadní (podél X)
     const bBack = box(size, h, t, MAT.posts);
     bBack.position.set(0, h / 2, size / 2 - t / 2);
-    // Přední (podél X)
     const bFront = box(size, h, t, MAT.posts);
     bFront.position.set(0, h / 2, -size / 2 + t / 2);
-    // Levý (podél Z)
     const bLeft = box(t, h, size - 2 * t, MAT.posts);
     bLeft.position.set(-size / 2 + t / 2, h / 2, 0);
-    // Pravý (podél Z)
     const bRight = box(t, h, size - 2 * t, MAT.posts);
     bRight.position.set(size / 2 - t / 2, h / 2, 0);
 

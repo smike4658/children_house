@@ -1,5 +1,5 @@
 // ============================================================
-// 2D Koty — canvas overlay se sipkami a extension lines
+// 2D Koty — canvas overlay (přízemní verze)
 // ============================================================
 function drawDimensions(view) {
   const cv = document.getElementById('dim-canvas');
@@ -17,14 +17,12 @@ function drawDimensions(view) {
   const ROW1 = 30;
   const ROW2 = 60;
 
-  // World-to-screen
   function ws(wx, wy, wz) {
     const v = new THREE.Vector3(wx, wy, wz != null ? wz : 0);
     v.project(activeCamera);
     return { x: (v.x + 1) / 2 * cv.width, y: (1 - v.y) / 2 * cv.height };
   }
 
-  // Sipka (plny trojuhelnik)
   function drawArrow(x, y, angle) {
     ctx.save();
     ctx.translate(x, y);
@@ -39,14 +37,12 @@ function drawDimensions(view) {
     ctx.restore();
   }
 
-  // Text s pozadim
   function drawDimText(text, x, y, vertical) {
     ctx.save();
     ctx.font = 'bold 12px Segoe UI, sans-serif';
     var tw = ctx.measureText(text).width;
     var th = 14;
     var px = 6, py = 3;
-
     if (vertical) {
       ctx.translate(x, y);
       ctx.rotate(-Math.PI / 2);
@@ -67,7 +63,6 @@ function drawDimensions(view) {
     ctx.restore();
   }
 
-  // Popisek (uvnitr plochy, jemnejsi)
   function drawAreaLabel(text, wx, wy, wz) {
     var p = ws(wx, wy, wz);
     ctx.save();
@@ -79,276 +74,138 @@ function drawDimensions(view) {
     ctx.restore();
   }
 
-  // Horizontalni kota se sipkami a extension lines
-  // a, b = screen body (zacatek, konec), baseY = Y zakladny odkud vedou ext lines
-  // dimY = Y kde bude kotova cara
   function dimLineH(a, b, baseAY, baseBY, dimY) {
     var leftX = Math.min(a.x, b.x);
     var rightX = Math.max(a.x, b.x);
     var extDir = dimY > Math.max(baseAY, baseBY) ? 1 : -1;
-
     ctx.strokeStyle = DIM_COLOR_LIGHT;
     ctx.lineWidth = 1;
     ctx.setLineDash([]);
-
-    // Extension lines
     ctx.beginPath(); ctx.moveTo(a.x, baseAY); ctx.lineTo(a.x, dimY + extDir * EXT_OVERSHOOT); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(b.x, baseBY); ctx.lineTo(b.x, dimY + extDir * EXT_OVERSHOOT); ctx.stroke();
-
-    // Dimension line
     ctx.strokeStyle = DIM_COLOR;
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(a.x, dimY); ctx.lineTo(b.x, dimY); ctx.stroke();
-
-    // Sipky
     drawArrow(leftX, dimY, 0);
     drawArrow(rightX, dimY, Math.PI);
   }
 
-  // Vertikalni kota se sipkami a extension lines
-  // a, b = screen body (zacatek, konec), baseX = X zakladny odkud vedou ext lines
-  // dimX = X kde bude kotova cara
   function dimLineV(a, b, baseAX, baseBX, dimX) {
     var topY = Math.min(a.y, b.y);
     var botY = Math.max(a.y, b.y);
     var extDir = dimX > Math.max(baseAX, baseBX) ? 1 : -1;
-
     ctx.strokeStyle = DIM_COLOR_LIGHT;
     ctx.lineWidth = 1;
     ctx.setLineDash([]);
-
-    // Extension lines
     ctx.beginPath(); ctx.moveTo(baseAX, a.y); ctx.lineTo(dimX + extDir * EXT_OVERSHOOT, a.y); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(baseBX, b.y); ctx.lineTo(dimX + extDir * EXT_OVERSHOOT, b.y); ctx.stroke();
-
-    // Dimension line
     ctx.strokeStyle = DIM_COLOR;
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(dimX, a.y); ctx.lineTo(dimX, b.y); ctx.stroke();
-
-    // Sipky
     drawArrow(dimX, topY, -Math.PI / 2);
     drawArrow(dimX, botY, Math.PI / 2);
   }
 
   var hw = CONFIG.W / 2, hd = CONFIG.D / 2;
-  var hx = CONFIG.HOUSE_X;  // world X offset domečku
-  var divZ = CONFIG.divZ;
+  var hx = CONFIG.HOUSE_X;
 
-  // ---- PUDORYS 1. PATRO ----
+  // ---- PUDORYS ----
   if (view === 'floor1') {
-    // Kamera je nad domem, přední strana (-Z) je nahoře (malé screen Y),
-    // zadní strana (+Z) je dole (velké screen Y).
-    var tl = ws(hx-hw, 0, hd);   // screen dolů-vlevo (zadní-levý)
-    var tr = ws(hx+hw, 0, hd);    // screen dolů-vpravo (zadní-pravý)
-    var bl = ws(hx-hw, 0, -hd);  // screen nahoru-vlevo (přední-levý)
-    var br = ws(hx+hw, 0, -hd);   // screen nahoru-vpravo (přední-pravý)
-
-    // Sirka 310 cm — pod zadní hranou budovy (mimo budovu dole)
-    dimLineH(bl, br, tl.y, tr.y, tl.y + ROW2);
-    drawDimText('310 cm', (bl.x + br.x) / 2, tl.y + ROW2, false);
-
-    // Hloubka 242 cm (vpravo)
-    dimLineV(br, tr, br.x, tr.x, br.x + ROW2);
-    drawDimText('242 cm', br.x + ROW2, (br.y + tr.y) / 2, true);
-
-    // Popisek
-    drawAreaLabel('PRIZEMI — otevreno vpredu', (tl.x + tr.x) / 2, (tl.y + bl.y) / 2, null);
-  }
-
-  // ---- PUDORYS 2. PATRO ----
-  else if (view === 'floor2') {
     var tl = ws(hx-hw, 0, hd);
     var tr = ws(hx+hw, 0, hd);
     var bl = ws(hx-hw, 0, -hd);
     var br = ws(hx+hw, 0, -hd);
-    var divR = ws(hx+hw, 0, divZ);   // delici cara vpravo
-    var divL = ws(hx-hw, 0, divZ);  // delici cara vlevo
 
-    // Sirka 310 cm — pod zadní hranou budovy (mimo budovu dole)
     dimLineH(bl, br, tl.y, tr.y, tl.y + ROW2);
-    drawDimText('310 cm', (bl.x + br.x) / 2, tl.y + ROW2, false);
+    drawDimText((CONFIG.W * 100 | 0) + ' cm', (bl.x + br.x) / 2, tl.y + ROW2, false);
 
-    // Hloubka celkova 242 cm (vpravo, rada 2)
     dimLineV(br, tr, br.x, tr.x, br.x + ROW2);
-    drawDimText('242 cm', br.x + ROW2, (br.y + tr.y) / 2, true);
+    drawDimText((CONFIG.D * 100 | 0) + ' cm', br.x + ROW2, (br.y + tr.y) / 2, true);
 
-    // Terasa 70 cm (vpravo, rada 1)
-    dimLineV(br, divR, br.x, divR.x, br.x + ROW1);
-    drawDimText('70 cm', br.x + ROW1, (br.y + divR.y) / 2, true);
-
-    // Kabina 172 cm (vpravo, rada 1)
-    dimLineV(divR, tr, divR.x, tr.x, divR.x + ROW1);
-    drawDimText('172 cm', divR.x + ROW1, (divR.y + tr.y) / 2, true);
-
-    // Popisky uvnitr
-    drawAreaLabel('TERASA', (bl.x + br.x) / 2, (bl.y + divR.y) / 2, null);
-    drawAreaLabel('KABINA', (tl.x + tr.x) / 2, (divL.y + tl.y) / 2, null);
+    drawAreaLabel('DOMEK — 310 x 242 cm', (tl.x + tr.x) / 2, (tl.y + bl.y) / 2, null);
   }
 
   // ---- NARYS ZEPREDU ----
   else if (view === 'front') {
     var bl = ws(hx-hw, 0, -hd);
     var br = ws(hx+hw, 0, -hd);
-    var tlMid = ws(hx-hw, CONFIG.H1, -hd);
-    var tlTop = ws(hx-hw, CONFIG.H, -hd);
-    var tlPeak = ws(hx-hw, CONFIG.H + CONFIG.ROOF_PEAK, -hd);
+    var tlTop = ws(hx-hw, CONFIG.H_FRONT, -hd);
+    var tlRoof = ws(hx-hw, CONFIG.H_ROOF_FRONT, -hd);
 
-    // Sirka 310 cm (dole)
     dimLineH(bl, br, bl.y, br.y, bl.y + ROW1);
-    drawDimText('310 cm', (bl.x + br.x) / 2, bl.y + ROW1, false);
+    drawDimText((CONFIG.W * 100 | 0) + ' cm', (bl.x + br.x) / 2, bl.y + ROW1, false);
 
-    // 1. patro 150 cm (vlevo, rada 1)
-    dimLineV(bl, tlMid, bl.x, tlMid.x, bl.x - ROW1);
-    drawDimText('150 cm', bl.x - ROW1, (bl.y + tlMid.y) / 2, true);
+    // Výška stěny
+    dimLineV(bl, tlTop, bl.x, tlTop.x, bl.x - ROW1);
+    drawDimText((CONFIG.H_FRONT * 100 | 0) + ' cm', bl.x - ROW1, (bl.y + tlTop.y) / 2, true);
 
-    // 2. patro 150 cm (vlevo, rada 1)
-    dimLineV(tlMid, tlTop, tlMid.x, tlTop.x, tlMid.x - ROW1);
-    drawDimText('150 cm', tlMid.x - ROW1, (tlMid.y + tlTop.y) / 2, true);
-
-    // Celkova 300 cm (vlevo, rada 2)
-    dimLineV(bl, tlTop, bl.x, tlTop.x, bl.x - ROW2);
-    drawDimText('300 cm', bl.x - ROW2, (bl.y + tlTop.y) / 2, true);
-
-    // Hreben +45 cm (vlevo, rada 2)
-    dimLineV(tlTop, tlPeak, tlTop.x, tlPeak.x, tlTop.x - ROW2);
-    drawDimText('+45 cm', tlTop.x - ROW2, (tlTop.y + tlPeak.y) / 2, true);
-
-    // Zabradli 90 cm (vpravo, rada 1)
-    var railBot = ws(hx+hw, CONFIG.H1, -hd);
-    var railTop = ws(hx+hw, CONFIG.H1 + CONFIG.RAIL_H, -hd);
-    dimLineV(railBot, railTop, railBot.x, railTop.x, railBot.x + ROW1);
-    drawDimText('90 cm', railBot.x + ROW1, (railBot.y + railTop.y) / 2, true);
-
-    // Dvere 55x110 cm (kotovane v pohledu)
-    var doorX = hx - hw + CONFIG.DOOR_W / 2 + CONFIG.DOOR_OFFSET_X + 0.15;
-    var doorBot = ws(doorX, CONFIG.H1, divZ);
-    var doorTop = ws(doorX, CONFIG.H1 + CONFIG.DOOR_H, divZ);
-    drawAreaLabel('dvere 55x110', doorBot.x, (doorBot.y + doorTop.y) / 2, null);
-
-    // Okno predni steny
-    var doorRE = doorX + CONFIG.DOOR_W / 2;
-    var winCX = doorRE + (hx + hw - doorRE) / 2;
-    var winCY = CONFIG.H1 + (CONFIG.H - CONFIG.H1) / 2;
-    var winP = ws(winCX, winCY, divZ);
-    drawAreaLabel('okno 50x45', winP.x, winP.y, null);
+    // Výška střechy
+    dimLineV(bl, tlRoof, bl.x, tlRoof.x, bl.x - ROW2);
+    drawDimText((CONFIG.H_ROOF_FRONT * 100 | 0) + ' cm', bl.x - ROW2, (bl.y + tlRoof.y) / 2, true);
 
     // Popisky
-    drawAreaLabel('PRIZEMI (otevreno)', (bl.x + br.x) / 2, (bl.y + tlMid.y) / 2, null);
-    drawAreaLabel('2. PATRO', (bl.x + br.x) / 2, (tlMid.y + tlTop.y) / 2, null);
+    var doorX = hx + CONFIG.DOOR_OFFSET_X;
+    var doorBot = ws(doorX, 0, -hd);
+    var doorTop = ws(doorX, CONFIG.DOOR_H, -hd);
+    drawAreaLabel('dvere ' + (CONFIG.DOOR_W * 100 | 0) + 'x' + (CONFIG.DOOR_H * 100 | 0), doorBot.x, (doorBot.y + doorTop.y) / 2, null);
   }
 
   // ---- NARYS Z BOKU ----
   else if (view === 'side') {
-    // Kamera na +X, screen X = -Z (predni vlevo, zadni vpravo? nebo naopak)
-    // Musime pouzit ws a zjistit skutecne screen pozice
     var frontBot = ws(hx+hw, 0, -hd);
     var backBot = ws(hx+hw, 0, hd);
-    var frontMid = ws(hx+hw, CONFIG.H1, -hd);
-    var backMid = ws(hx+hw, CONFIG.H1, hd);
-    var frontTop = ws(hx+hw, CONFIG.H, -hd);
-    var backTop = ws(hx+hw, CONFIG.H, hd);
-    var backPeak = ws(hx+hw, CONFIG.H + CONFIG.ROOF_PEAK, hd);
-    var divBot = ws(hx+hw, 0, divZ);
-    var divMid = ws(hx+hw, CONFIG.H1, divZ);
+    var frontTop = ws(hx+hw, CONFIG.H_FRONT, -hd);
+    var backTop = ws(hx+hw, CONFIG.H_BACK, hd);
+    var frontRoof = ws(hx+hw, CONFIG.H_ROOF_FRONT, -hd);
 
-    // Zjistime ktery je screen vlevo
     var leftBot = frontBot.x < backBot.x ? frontBot : backBot;
     var rightBot = frontBot.x < backBot.x ? backBot : frontBot;
-    var leftMid = frontBot.x < backBot.x ? frontMid : backMid;
-    var rightMid = frontBot.x < backBot.x ? backMid : frontMid;
-    var leftTop = frontBot.x < backBot.x ? frontTop : backTop;
 
-    // Terasa 70 cm (dole, rada 1)
-    var baseY = Math.max(frontBot.y, divBot.y, backBot.y);
-    var dimY1 = baseY + ROW1;
+    // Hloubka (dole)
+    var baseY = Math.max(frontBot.y, backBot.y);
+    dimLineH(frontBot, backBot, frontBot.y, backBot.y, baseY + ROW1);
+    drawDimText((CONFIG.D * 100 | 0) + ' cm', (frontBot.x + backBot.x) / 2, baseY + ROW1, false);
 
-    dimLineH(frontBot, divBot, frontBot.y, divBot.y, dimY1);
-    drawDimText('70 cm', (frontBot.x + divBot.x) / 2, dimY1, false);
+    // Výška přední stěny (vlevo)
+    dimLineV(leftBot, frontTop, leftBot.x, frontTop.x, leftBot.x - ROW1);
+    drawDimText((CONFIG.H_FRONT * 100 | 0) + ' cm', leftBot.x - ROW1, (leftBot.y + frontTop.y) / 2, true);
 
-    // Kabina 172 cm (dole, rada 1)
-    dimLineH(divBot, backBot, divBot.y, backBot.y, dimY1);
-    drawDimText('172 cm', (divBot.x + backBot.x) / 2, dimY1, false);
+    // Výška střechy vpředu
+    dimLineV(leftBot, frontRoof, leftBot.x, frontRoof.x, leftBot.x - ROW2);
+    drawDimText((CONFIG.H_ROOF_FRONT * 100 | 0) + ' cm', leftBot.x - ROW2, (leftBot.y + frontRoof.y) / 2, true);
 
-    // Celkova hloubka 242 cm (dole, rada 2)
-    var dimY2 = baseY + ROW2;
-    // Extension lines prodlouzit z rady 1
-    dimLineH(frontBot, backBot, frontBot.y, backBot.y, dimY2);
-    drawDimText('242 cm', (frontBot.x + backBot.x) / 2, dimY2, false);
-
-    // Vysky (vlevo)
-    // 1. patro 150 cm
-    dimLineV(leftBot, leftMid, leftBot.x, leftMid.x, leftBot.x - ROW1);
-    drawDimText('150 cm', leftBot.x - ROW1, (leftBot.y + leftMid.y) / 2, true);
-
-    // 2. patro 150 cm
-    dimLineV(leftMid, leftTop, leftMid.x, leftTop.x, leftMid.x - ROW1);
-    drawDimText('150 cm', leftMid.x - ROW1, (leftMid.y + leftTop.y) / 2, true);
-
-    // Celkova 300 cm
-    dimLineV(leftBot, leftTop, leftBot.x, leftTop.x, leftBot.x - ROW2);
-    drawDimText('300 cm', leftBot.x - ROW2, (leftBot.y + leftTop.y) / 2, true);
-
-    // Hreben +45 cm (vlevo, navazuje na 300 cm)
-    dimLineV(backTop, backPeak, backTop.x, backPeak.x, leftBot.x - ROW1);
-    drawDimText('+45 cm', leftBot.x - ROW1, (backTop.y + backPeak.y) / 2, true);
-
-    // Popisky
-    drawAreaLabel('PRIZEMI', (leftBot.x + rightBot.x) / 2, (leftBot.y + leftMid.y) / 2, null);
-    drawAreaLabel('2. PATRO', (leftBot.x + rightBot.x) / 2, (leftMid.y + leftTop.y) / 2, null);
+    // Výška zadní stěny (vpravo)
+    dimLineV(rightBot, backTop, rightBot.x, backTop.x, rightBot.x + ROW1);
+    drawDimText((CONFIG.H_BACK * 100 | 0) + ' cm', rightBot.x + ROW1, (rightBot.y + backTop.y) / 2, true);
   }
 
   // ---- REZ ----
   else if (view === 'section') {
     var frontBot = ws(hx, 0, -hd);
     var backBot = ws(hx, 0, hd);
-    var frontMid = ws(hx, CONFIG.H1, -hd);
-    var backMid = ws(hx, CONFIG.H1, hd);
-    var frontTop = ws(hx, CONFIG.H, -hd);
-    var backTop = ws(hx, CONFIG.H, hd);
-    var backPeak = ws(hx, CONFIG.H + CONFIG.ROOF_PEAK, hd);
-    var divBot = ws(hx, 0, divZ);
+    var frontTop = ws(hx, CONFIG.H_FRONT, -hd);
+    var backTop = ws(hx, CONFIG.H_BACK, hd);
+    var frontRoof = ws(hx, CONFIG.H_ROOF_FRONT, -hd);
 
     var leftBot = frontBot.x < backBot.x ? frontBot : backBot;
     var rightBot = frontBot.x < backBot.x ? backBot : frontBot;
-    var leftMid = frontBot.x < backBot.x ? frontMid : backMid;
-    var leftTop = frontBot.x < backBot.x ? frontTop : backTop;
 
-    // Terasa + kabina (dole, rada 1)
-    var baseY = Math.max(frontBot.y, divBot.y, backBot.y);
-    var dimY1 = baseY + ROW1;
+    var baseY = Math.max(frontBot.y, backBot.y);
+    dimLineH(frontBot, backBot, frontBot.y, backBot.y, baseY + ROW1);
+    drawDimText((CONFIG.D * 100 | 0) + ' cm', (frontBot.x + backBot.x) / 2, baseY + ROW1, false);
 
-    dimLineH(frontBot, divBot, frontBot.y, divBot.y, dimY1);
-    drawDimText('70 cm', (frontBot.x + divBot.x) / 2, dimY1, false);
+    dimLineV(leftBot, frontTop, leftBot.x, frontTop.x, leftBot.x - ROW1);
+    drawDimText((CONFIG.H_FRONT * 100 | 0) + ' cm', leftBot.x - ROW1, (leftBot.y + frontTop.y) / 2, true);
 
-    dimLineH(divBot, backBot, divBot.y, backBot.y, dimY1);
-    drawDimText('172 cm', (divBot.x + backBot.x) / 2, dimY1, false);
+    dimLineV(leftBot, frontRoof, leftBot.x, frontRoof.x, leftBot.x - ROW2);
+    drawDimText((CONFIG.H_ROOF_FRONT * 100 | 0) + ' cm', leftBot.x - ROW2, (leftBot.y + frontRoof.y) / 2, true);
 
-    // Celkova hloubka (dole, rada 2)
-    var dimY2 = baseY + ROW2;
-    dimLineH(frontBot, backBot, frontBot.y, backBot.y, dimY2);
-    drawDimText('242 cm', (frontBot.x + backBot.x) / 2, dimY2, false);
-
-    // Vysky (vlevo)
-    dimLineV(leftBot, leftMid, leftBot.x, leftMid.x, leftBot.x - ROW1);
-    drawDimText('150 cm', leftBot.x - ROW1, (leftBot.y + leftMid.y) / 2, true);
-
-    dimLineV(leftMid, leftTop, leftMid.x, leftTop.x, leftMid.x - ROW1);
-    drawDimText('150 cm', leftMid.x - ROW1, (leftMid.y + leftTop.y) / 2, true);
-
-    dimLineV(leftBot, leftTop, leftBot.x, leftTop.x, leftBot.x - ROW2);
-    drawDimText('300 cm', leftBot.x - ROW2, (leftBot.y + leftTop.y) / 2, true);
-
-    dimLineV(backTop, backPeak, backTop.x, backPeak.x, Math.max(backTop.x, backPeak.x) + ROW1);
-    drawDimText('+45 cm', Math.max(backTop.x, backPeak.x) + ROW1, (backTop.y + backPeak.y) / 2, true);
-
-    // Info text
     ctx.save();
     ctx.font = '12px Segoe UI, sans-serif';
     ctx.fillStyle = LABEL_COLOR;
     ctx.fillText('REZ — pohled zprava (X=0)', 20, 30);
-    ctx.fillText('Podlaha 2. patra: ' + (CONFIG.H1 * 100 | 0) + ' cm', 20, 50);
-    ctx.fillText('Vyska hrebene: ' + ((CONFIG.H + CONFIG.ROOF_PEAK) * 100 | 0) + ' cm', 20, 70);
+    ctx.fillText('Vyska predni steny: ' + (CONFIG.H_FRONT * 100 | 0) + ' cm', 20, 50);
+    ctx.fillText('Vyska zadni steny: ' + (CONFIG.H_BACK * 100 | 0) + ' cm', 20, 70);
     ctx.restore();
   }
 }

@@ -18,8 +18,8 @@ const scene = new THREE.Scene();
 // Cameras
 // ============================================================
 const perspCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-perspCamera.position.set(CONFIG.HOUSE_X + 6, 4, -6);
-perspCamera.lookAt(CONFIG.HOUSE_X, 1.5, 0);
+perspCamera.position.set(CONFIG.HOUSE_X + 5, 3, -5);
+perspCamera.lookAt(CONFIG.HOUSE_X, 1, 0);
 
 let orthoCamera = null;
 let activeCamera = perspCamera;

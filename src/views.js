@@ -1,11 +1,10 @@
 // ============================================================
-// Tab / View System
+// Tab / View System (přízemní verze)
 // ============================================================
 let composer = null;
 const playhouse = new THREE.Group();
 
 function switchView(view) {
-  // Exit walk mode when switching views
   if (walkModeOn) {
     exitWalkMode();
     document.getElementById('toggle-walk').classList.remove('on');
@@ -15,34 +14,41 @@ function switchView(view) {
     t.classList.toggle('active', t.dataset.view === view);
   });
   const is3D = view === '3d';
+  const isMaterials = view === 'materials';
   document.getElementById('view-presets').style.display = is3D ? 'flex' : 'none';
   document.getElementById('toggles').style.display = is3D ? 'flex' : 'none';
-  document.getElementById('print-btn').style.display = is3D ? 'none' : 'block';
+  document.getElementById('print-btn').style.display = (is3D || isMaterials) ? 'none' : 'block';
   document.getElementById('controls-hint').style.display = is3D ? 'block' : 'none';
-  document.getElementById('dim-canvas').style.display = is3D ? 'none' : 'block';
+  document.getElementById('dim-canvas').style.display = (is3D || isMaterials) ? 'none' : 'block';
+  document.getElementById('canvas-container').style.display = isMaterials ? 'none' : 'block';
+  document.getElementById('specs').style.display = isMaterials ? 'none' : 'flex';
+  document.getElementById('legend').style.display = isMaterials ? 'none' : 'block';
+
+  const matPage = document.getElementById('materials-page');
+  if (isMaterials) {
+    matPage.innerHTML = buildMaterialsPage();
+    matPage.style.display = 'block';
+    return;
+  } else {
+    matPage.style.display = 'none';
+  }
 
   const hw = CONFIG.W / 2, hd = CONFIG.D / 2;
-  const H = CONFIG.H + CONFIG.ROOF_PEAK;
+  const H = CONFIG.H_ROOF_FRONT;
   const pad = 1.5;
 
-  sectionPlane.constant = 1000; // default: no clipping
+  sectionPlane.constant = 1000;
 
-  // Obnovit viditelnost všech objektů před přepnutím
-  playhouse.traverse(c => {
-    c.visible = true;
-  });
+  playhouse.traverse(c => { c.visible = true; });
 
-  // Vedlejší assety (pískoviště, houpačka, okolí) — jen v 3D pohledu
-  // Sandbox je v playhouse group
+  // Vedlejší assety — jen v 3D
   playhouse.traverse(c => {
     if (c.name === 'sandbox') c.visible = is3D;
   });
-  // Swing a surroundings jsou přímo ve scene
   scene.traverse(c => {
     if (c.name === 'swing' || c.name === 'surroundings') c.visible = is3D;
   });
 
-  // Stíny jen v 3D pohledu — v technických výkresech ruší
   renderer.shadowMap.enabled = is3D;
   dirLight.castShadow = is3D;
   renderer.shadowMap.needsUpdate = true;
@@ -55,35 +61,10 @@ function switchView(view) {
       new THREE.Vector3(CONFIG.HOUSE_X, 0, 0),
       -hw - pad, hw + pad, hd + pad, -hd - pad
     );
-    // Zobrazit pouze 1. patro (y = 0 až H1)
-    // Kamera je na y=10, near/far ořízne vše mimo rozsah Y 0..H1-0.01
-    orthoCamera.near = 10 - CONFIG.H1 + 0.01;
+    orthoCamera.near = 10 - CONFIG.H_FRONT + 0.01;
     orthoCamera.far = 10.15;
     orthoCamera.updateProjectionMatrix();
-    // Skrýt prvky 2. patra které by mohly prosakovat
-    playhouse.traverse(c => {
-      if (c.name === 'slide' || c.name === 'railing' || c.name === 'ladder') {
-        c.visible = false;
-      }
-    });
-  } else if (view === 'floor2') {
-    setupOrthoView(
-      new THREE.Vector3(CONFIG.HOUSE_X, 10, 0),
-      new THREE.Vector3(CONFIG.HOUSE_X, 0, 0),
-      -hw - pad, hw + pad, hd + pad, -hd - pad
-    );
-    // Zobrazit pouze 2. patro (y = H1 až H) — bez střechy
-    orthoCamera.near = 10 - CONFIG.H - 0.05;
-    orthoCamera.far = 10 - CONFIG.H1 + 0.01;
-    orthoCamera.updateProjectionMatrix();
-    // Skrýt střechu, patky a zem — v půdorysu 2. patra nechceme
-    playhouse.traverse(c => {
-      if (c.name === 'roof' || c.name === 'footings' || c.name === 'ground' || c.name === 'contactShadow') {
-        c.visible = false;
-      }
-    });
   } else if (view === 'front') {
-    // Frustum bounds jsou view-space offsety od pozice kamery (ne absolutní world Y)
     const halfH = H / 2 + pad;
     setupOrthoView(
       new THREE.Vector3(CONFIG.HOUSE_X, H / 2, -10),
@@ -104,10 +85,9 @@ function switchView(view) {
       new THREE.Vector3(CONFIG.HOUSE_X, H / 2, 0),
       -hd - pad, hd + pad, halfH, -halfH
     );
-    sectionPlane.constant = CONFIG.HOUSE_X; // Clip at house center X
+    sectionPlane.constant = CONFIG.HOUSE_X;
   }
 
-  // Kreslit kóty a popisky po dokončení přechodu kamery
   if (!is3D) setTimeout(() => drawDimensions(view), 50);
 }
 
@@ -129,11 +109,11 @@ function setupOrthoView(pos, target, left, right, top, bottom) {
 // View Presets (3D)
 // ============================================================
 const VIEW_PRESETS = {
-  iso: { pos: [CONFIG.HOUSE_X + 6, 4, -6], target: [CONFIG.HOUSE_X, 1.5, 0] },
-  front: { pos: [CONFIG.HOUSE_X, 2, -8], target: [CONFIG.HOUSE_X, 1.5, 0] },
-  back: { pos: [CONFIG.HOUSE_X, 2, 8], target: [CONFIG.HOUSE_X, 1.5, 0] },
-  left: { pos: [CONFIG.HOUSE_X - 8, 2, 0], target: [CONFIG.HOUSE_X, 1.5, 0] },
-  right: { pos: [CONFIG.HOUSE_X + 8, 2, 0], target: [CONFIG.HOUSE_X, 1.5, 0] },
+  iso: { pos: [CONFIG.HOUSE_X + 5, 3, -5], target: [CONFIG.HOUSE_X, 1, 0] },
+  front: { pos: [CONFIG.HOUSE_X, 1.5, -8], target: [CONFIG.HOUSE_X, 1, 0] },
+  back: { pos: [CONFIG.HOUSE_X, 1.5, 8], target: [CONFIG.HOUSE_X, 1, 0] },
+  left: { pos: [CONFIG.HOUSE_X - 8, 1.5, 0], target: [CONFIG.HOUSE_X, 1, 0] },
+  right: { pos: [CONFIG.HOUSE_X + 8, 1.5, 0], target: [CONFIG.HOUSE_X, 1, 0] },
   top: { pos: [CONFIG.HOUSE_X, 10, 0], target: [CONFIG.HOUSE_X, 0, 0] },
 };
 

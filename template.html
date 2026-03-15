@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dětský Patrový Domeček — 3D Návrh</title>
+  <title>Dětský Přízemní Domeček — 3D Návrh</title>
   <style>
     * {
       margin: 0;
@@ -285,6 +285,187 @@
       color: #8a9a72;
     }
 
+    /* Materials page */
+    #materials-page {
+      position: absolute;
+      top: 55px;
+      left: 0;
+      width: 100%;
+      height: calc(100% - 55px);
+      background: #1a1f16;
+      overflow-y: auto;
+      pointer-events: all;
+      padding: 20px 20px 30px 20px;
+      z-index: 5;
+    }
+
+    .mat-section {
+      background: rgba(42, 48, 34, 0.7);
+      border: 1px solid #3a4030;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .mat-section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .mat-section-header:hover {
+      background: rgba(58, 64, 48, 0.5);
+      border-radius: 8px 8px 0 0;
+    }
+
+    .mat-section-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .mat-section-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #d4c9a8;
+      flex: 1;
+    }
+
+    .mat-section-count {
+      font-size: 12px;
+      color: #8a9a72;
+    }
+
+    .mat-section-toggle {
+      font-size: 12px;
+      color: #8a9a72;
+      transition: transform 0.2s;
+    }
+
+    .mat-section.collapsed .mat-section-toggle {
+      transform: rotate(-90deg);
+    }
+
+    .mat-section.collapsed .mat-table,
+    .mat-section.collapsed .mat-section-info {
+      display: none;
+    }
+
+    .mat-section-info {
+      padding: 4px 16px 8px 38px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .mat-material {
+      font-size: 12px;
+      color: #8a9a72;
+      background: rgba(90, 106, 74, 0.2);
+      padding: 2px 8px;
+      border-radius: 3px;
+    }
+
+    .mat-link {
+      font-size: 12px;
+      color: #7aaa5a;
+      text-decoration: none;
+      pointer-events: all;
+    }
+
+    .mat-link:hover {
+      color: #a0cc80;
+      text-decoration: underline;
+    }
+
+    .mat-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .mat-table th {
+      text-align: left;
+      padding: 6px 16px;
+      color: #8a9a72;
+      font-weight: 500;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid #3a4030;
+    }
+
+    .mat-table td {
+      padding: 8px 16px;
+      color: #d4c9a8;
+      border-bottom: 1px solid rgba(58, 64, 48, 0.4);
+    }
+
+    .mat-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .mat-table .dim {
+      color: #8a9a72;
+      font-size: 12px;
+    }
+
+    .mat-table .qty {
+      font-weight: 600;
+      color: #d4c9a8;
+      text-align: center;
+    }
+
+    .mat-table .note {
+      color: #6a7a5a;
+      font-size: 12px;
+      font-style: italic;
+    }
+
+    .mat-summary {
+      max-width: 900px;
+      margin: 0 auto 20px;
+      background: rgba(42, 48, 34, 0.9);
+      border: 1px solid #5a6a4a;
+      border-radius: 8px;
+      padding: 16px 20px;
+    }
+
+    .mat-summary h3 {
+      font-size: 14px;
+      color: #d4c9a8;
+      margin-bottom: 10px;
+    }
+
+    .mat-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px;
+    }
+
+    .mat-summary-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      padding: 4px 0;
+    }
+
+    .mat-summary-item .label {
+      color: #8a9a72;
+    }
+
+    .mat-summary-item .value {
+      color: #d4c9a8;
+      font-weight: 600;
+    }
+
     @media print {
       #ui {
         display: none;
@@ -309,49 +490,39 @@
     <!-- Tab bar -->
     <div id="tabs">
       <div class="tab active" data-view="3d">3D</div>
-      <div class="tab" data-view="floor1">Pudorys 1. patro</div>
-      <div class="tab" data-view="floor2">Pudorys 2. patro</div>
+      <div class="tab" data-view="floor1">Půdorys</div>
       <div class="tab" data-view="front">Nárys zepředu</div>
       <div class="tab" data-view="side">Nárys z boku</div>
-      <div class="tab" data-view="section">Rez</div>
+      <div class="tab" data-view="section">Řez</div>
+      <div class="tab" data-view="materials">Materiály</div>
     </div>
 
     <!-- Spec chips -->
     <div id="specs">
-      <div class="chip">Šířka: <span>310 cm</span></div>
-      <div class="chip">Hloubka: <span>242 cm</span></div>
-      <div class="chip">Výška: <span>300 / 345 cm</span></div>
-      <div class="chip">Strop 1p: <span>150 cm</span></div>
-      <div class="chip">Kabina: <span>310 × 172 cm</span></div>
-      <div class="chip">Terasa: <span>310 × 70 cm</span></div>
+      <div class="chip">Šířka: <span id="spec-w"></span></div>
+      <div class="chip">Hloubka: <span id="spec-d"></span></div>
+      <div class="chip">Stěna vpředu: <span id="spec-hf"></span></div>
+      <div class="chip">Stěna vzadu: <span id="spec-hb"></span></div>
+      <div class="chip">Střecha: <span id="spec-hr"></span></div>
     </div>
 
     <!-- Legend -->
     <div id="legend">
       <h4>Legenda</h4>
       <div class="legend-item">
-        <div class="legend-dot" style="background:#C4944A"></div>Nosné sloupky
+        <div class="legend-dot" style="background:#C88E4B"></div>Nosné sloupky
       </div>
       <div class="legend-item">
-        <div class="legend-dot" style="background:#B8860B"></div>Stěny / palubky
+        <div class="legend-dot" style="background:#EAEBE6"></div>Stěny / palubky
       </div>
       <div class="legend-item">
-        <div class="legend-dot" style="background:#A0784C"></div>Podlahy
+        <div class="legend-dot" style="background:#C88E4B"></div>Podlaha
       </div>
       <div class="legend-item">
-        <div class="legend-dot" style="background:#6B3A2A"></div>Střecha
+        <div class="legend-dot" style="background:#7F878C"></div>Střecha
       </div>
       <div class="legend-item">
-        <div class="legend-dot" style="background:#D4A056"></div>Zábradlí
-      </div>
-      <div class="legend-item">
-        <div class="legend-dot" style="background:#FFD700"></div>Klouzačka
-      </div>
-      <div class="legend-item">
-        <div class="legend-dot" style="background:#5B8C3E"></div>Žebřík
-      </div>
-      <div class="legend-item">
-        <div class="legend-dot" style="background:#999999"></div>Betonové patky
+        <div class="legend-dot" style="background:#A4A8A4"></div>Betonové patky
       </div>
     </div>
 
@@ -389,6 +560,9 @@
 
     <!-- Kóty a popisky pro 2D pohledy -->
     <canvas id="dim-canvas"></canvas>
+
+    <!-- Materiálová stránka -->
+    <div id="materials-page" style="display:none"></div>
   </div>
 
   <!-- Three.js CDN -->

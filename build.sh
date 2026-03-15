@@ -27,6 +27,7 @@ MODULES=(
   src/sandbox.js
   src/surroundings.js
   src/swing.js
+  src/materials_page.js
   src/dimensions.js
   src/views.js
   src/controls.js
