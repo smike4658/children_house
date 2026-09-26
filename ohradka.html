@@ -414,7 +414,7 @@
       <div class="row"><label for="f-post">Hranol (průřez)</label><div class="num"><input id="f-post" data-k="post" type="number" min="3" max="12" step="0.5"><span>cm</span></div></div>
       <div class="row"><label for="f-maxSpan">Max. rozteč sloupků</label><div class="num"><input id="f-maxSpan" data-k="maxSpan" type="number" min="30" max="200" step="5"><span>cm</span></div></div>
       <div class="row"><label for="f-backPosts">Sloupky na zadní stěně</label><div class="num"><input id="f-backPosts" data-k="backPosts" type="number" min="0" max="12" step="1"><span>ks</span></div></div>
-      <p class="hint">Počet včetně rohových. 0 = rozmístit podle max. rozteče.</p>
+      <p class="hint">Počet včetně rohových. 0 = podle max. rozteče, u zadní strany bez prken jen rohové. 3 = jeden sloupek uprostřed.</p>
       <div class="checks-row" role="group" aria-label="Opláštěné strany">
         <label for="f-back"><input id="f-back" data-k="back" type="checkbox"> Zadní</label>
         <label for="f-left"><input id="f-left" data-k="left" type="checkbox"> Levá</label>
@@ -532,12 +532,12 @@
     L: 358, D: 154, H: 160,
     doorW: 118, doorSide: 'right', door: 30,
     bw: 8, bt: 1.8, gap: 1, fit: true, g0: 3, wood: 'smrk',
-    post: 5, maxSpan: 80, backPosts: 4,
-    back: true, left: true, right: true, front: true,
+    post: 5, maxSpan: 80, backPosts: 0,
+    back: false, left: true, right: true, front: true,
     binCount: 4, binVol: 240, binTypes: [0, 1, 2, 3, 4, 5, 0, 1],
     stockB: 400, priceB: 49, stockP: 400, priceP: 35,
   };
-  const STORE_KEY = 'ohradka-popelnice-v1';
+  const STORE_KEY = 'ohradka-popelnice-v2';
 
   let P = JSON.parse(JSON.stringify(DEFAULTS));
   try {
@@ -601,17 +601,16 @@
     const doorClamped = P.front && G.doorW !== +P.doorW;
 
     // --- Sloupky
-    const c = t + p / 2, xL = c, xR = L - c, zB = c, zF = D - c;
+    // bez zadních prken stojí zadní rohové sloupky až u plotu (z = 0)
+    const c = t + p / 2, xL = c, xR = L - c, zB = P.back ? c : p / 2, zF = D - c;
     const dist = (a, b) => {
       const k = Math.max(1, Math.ceil((b - a) / +P.maxSpan - 1e-9));
       return Array.from({ length: k + 1 }, (_, i) => a + (i * (b - a)) / k);
     };
     const wp = { back: [], front: [], left: [], right: [] };
-    if (P.back) {
-      const nbp = Math.round(+P.backPosts || 0);
-      const xs = nbp >= 2 ? Array.from({ length: nbp }, (_, i) => xL + (i * (xR - xL)) / (nbp - 1)) : dist(xL, xR);
-      wp.back = xs.map((x) => ({ x, z: zB }));
-    }
+    const nbp = Math.round(+P.backPosts || 0);
+    if (nbp >= 2) wp.back = Array.from({ length: nbp }, (_, i) => ({ x: xL + (i * (xR - xL)) / (nbp - 1), z: zB }));
+    else if (P.back) wp.back = dist(xL, xR).map((x) => ({ x, z: zB }));
     if (P.left) wp.left = dist(zB, zF).map((z) => ({ x: xL, z }));
     if (P.right) wp.right = dist(zB, zF).map((z) => ({ x: xR, z }));
     if (P.front) {
@@ -677,11 +676,12 @@
     G.spec = spec;
     G.bins = Array.from({ length: nb }, (_, i) => ({
       x: in0 + gb + i * (spec.w + gb),
-      z: t + p + 2,
+      z: zB + p / 2 + 2,
       w: spec.w, d: spec.d, h: spec.h,
       type: (P.binTypes && P.binTypes[i] != null) ? P.binTypes[i] : 0,
     }));
-    G.binFront = t + p + 2 + spec.d;
+    G.zBackInner = zB + p / 2;
+    G.binFront = G.zBackInner + 2 + spec.d;
     G.frontInner = P.front ? D - t - p : D;
     G.aisle = G.frontInner - G.binFront;
 
@@ -1126,7 +1126,7 @@
     });
 
     // Vnitřní líc sloupků (tečkovaně)
-    s += `<rect x="${t + p}" y="${t + p}" width="${L - 2 * (t + p)}" height="${D - 2 * (t + p)}" class="sv-hidden" style="stroke-dasharray:1 3"/>`;
+    s += `<rect x="${t + p}" y="${G.zBackInner}" width="${L - 2 * (t + p)}" height="${D - t - p - G.zBackInner}" class="sv-hidden" style="stroke-dasharray:1 3"/>`;
 
     // Sloupky
     G.posts.forEach((q) => { s += rect(mx(q.x) - p / 2, q.z - p / 2, p, p, 'sv-post'); });
@@ -1173,7 +1173,7 @@
       s += dimY(G.binFront, G.frontInner, xa, xa, xa, `ulička ${f(G.aisle)}`, fs * 0.85);
       s += dimY(b.z, G.binFront, b.x - fs * 0.9, b.x, b.x, `${f(b.d)}`, fs * 0.8);
     }
-    s += dimY(t + p, D - t - p, L + fs * 2.4, mx(L - t - p) , mx(L - t - p), `${f(D - 2 * (t + p))} světlá`, fs * 0.85);
+    s += dimY(G.zBackInner, D - t - p, L + fs * 2.4, mx(L - t - p), mx(L - t - p), `${f(D - t - p - G.zBackInner)} světlá`, fs * 0.85);
     s += '</svg>';
     $('#svgPlan').innerHTML = s;
   }
@@ -1353,7 +1353,7 @@
         <h2>Postup stavby</h2>
         <ol class="steps">
           <li>Vytyčte obdélník ${f(G.L)} × ${f(G.D)} cm a srovnejte podklad (dlažba nebo štěrk).</li>
-          <li>Osaďte ${G.posts.length} kotev podle půdorysu, rozteče os sloupků najdete v nárysu. Rohové sloupky stojí ${f(G.t + G.p / 2)} cm od vnější hrany.</li>
+          <li>Osaďte ${G.posts.length} kotev podle půdorysu, rozteče os sloupků najdete v nárysu. Osy rohových sloupků jsou ${f(G.t + G.p / 2)} cm od vnější hrany prken${P.back ? '' : ', zadní rohové sloupky stojí těsně u plotu'}.</li>
           <li>Přišroubujte sloupky ${f(G.top)} cm a zkontrolujte svislost vodováhou.</li>
           <li>Prkna montujte odspodu, první ${f(G.g0)} cm nad terénem, mezera ${f(G.gap, 2)} cm (vložte distanční lať). Šikmé hrany rhombusu otočte tak, aby horní hrana padala ven a voda odtékala.</li>
           <li>Dveře sestavte naplocho: dvě svislice, šikmá vzpěra od spodního závěsu k hornímu rohu u zámku, pak prkna. Zavěste je na rohový sloupek.</li>
