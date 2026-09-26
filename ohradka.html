@@ -415,6 +415,10 @@
       <div class="row"><label for="f-maxSpan">Max. rozteč sloupků</label><div class="num"><input id="f-maxSpan" data-k="maxSpan" type="number" min="30" max="200" step="5"><span>cm</span></div></div>
       <div class="row"><label for="f-backPosts">Sloupky na zadní stěně</label><div class="num"><input id="f-backPosts" data-k="backPosts" type="number" min="0" max="12" step="1"><span>ks</span></div></div>
       <p class="hint">Počet včetně rohových. 0 = podle max. rozteče, u zadní strany bez prken jen rohové. 3 = jeden sloupek uprostřed.</p>
+      <div class="row"><label for="f-backRails">Vodorovné trámy vzadu</label>
+        <select id="f-backRails" data-k="backRails"><option value="0">žádný</option><option value="1">horní</option><option value="2">horní + spodní</option></select></div>
+      <div class="row"><label for="f-railTop">Horní hrana horního trámu</label><div class="num"><input id="f-railTop" data-k="railTop" type="number" min="40" max="250" step="1"><span>cm</span></div></div>
+      <p class="hint">Trámy spojují zadní rohové sloupky, když vzadu nejsou prkna.</p>
       <div class="checks-row" role="group" aria-label="Opláštěné strany">
         <label for="f-back"><input id="f-back" data-k="back" type="checkbox"> Zadní</label>
         <label for="f-left"><input id="f-left" data-k="left" type="checkbox"> Levá</label>
@@ -429,6 +433,7 @@
       <div class="row"><label for="f-binCount">Počet</label><div class="num"><input id="f-binCount" data-k="binCount" type="number" min="0" max="8" step="1"><span>ks</span></div></div>
       <div class="row"><label for="f-binVol">Objem</label>
         <select id="f-binVol" data-k="binVol"><option value="120">120 l (48 × 55 cm)</option><option value="240">240 l (58 × 73 cm)</option></select></div>
+      <div class="row"><label for="f-binBack">Odstup od zadních sloupků</label><div class="num"><input id="f-binBack" data-k="binBack" type="number" min="0" max="40" step="1"><span>cm</span></div></div>
       <div id="binTypes"></div>
     </fieldset>
 
@@ -532,9 +537,9 @@
     L: 358, D: 154, H: 160,
     doorW: 118, doorSide: 'right', door: 30,
     bw: 8, bt: 1.8, gap: 1, fit: true, g0: 3, wood: 'smrk',
-    post: 5, maxSpan: 80, backPosts: 0,
+    post: 5, maxSpan: 80, backPosts: 0, backRails: 2, railTop: 160,
     back: false, left: true, right: true, front: true,
-    binCount: 4, binVol: 240, binTypes: [0, 1, 2, 3, 4, 5, 0, 1],
+    binCount: 4, binVol: 240, binBack: 2, binTypes: [0, 1, 2, 3, 4, 5, 0, 1],
     stockB: 400, priceB: 49, stockP: 400, priceP: 35,
   };
   const STORE_KEY = 'ohradka-popelnice-v2';
@@ -657,15 +662,26 @@
       const d = {
         w: dw,
         h: G.top - g0,
-        latchV: { x0: L - dw, x1: L - dw + p },
+        // doraz: lať 3 × 5 cm na boku zámkového sloupku, křídlo na ni dosedá 2 cm
+        stop: { x0: L - dw - DOOR_GAP, x1: L - dw + 2 },
+        latchV: { x0: L - dw + 2.5, x1: L - dw + 2.5 + p },
         hingeV: { x0: L - t - 2 * p - DOOR_GAP, x1: L - t - p - DOOR_GAP },
       };
       const x1 = d.hingeV.x0, y1 = g0 + p * 0.5, x2 = d.latchV.x1, y2 = G.top - p * 0.5;
       d.diag = { x1, y1, x2, y2, len: Math.hypot(x1 - x2, y2 - y1) };
-      d.clear = dw + DOOR_GAP - t - p; // světlý průchod při otevření na 90°
+      d.clear = (L - t - p) - d.stop.x1; // světlý průchod při otevření na 90° (od dorazu k rohovému sloupku)
+      // hmotnost křídla: smrk ~450 kg/m³
+      d.kg = ((n * w * t * dw) + (2 * d.h + d.diag.len) * p * p) * 0.00045;
       d.hinges = d.h > 120 ? 3 : 2;
       G.door = d;
     }
+
+    // --- Vodorovné trámy vzadu (jen bez zadních prken)
+    G.zB = zB;
+    G.rails = [];
+    const nr = P.back ? 0 : Math.round(+P.backRails || 0);
+    if (nr >= 1) G.rails.push({ label: 'Zadní vodorovný trám, horní', x0: xL + p / 2, x1: xR - p / 2, y0: Math.min(+P.railTop, G.top) - p });
+    if (nr >= 2) G.rails.push({ label: 'Zadní vodorovný trám, spodní', x0: xL + p / 2, x1: xR - p / 2, y0: g0 });
 
     // --- Popelnice
     const spec = BIN_SPECS[+P.binVol] || BIN_SPECS[240];
@@ -676,12 +692,12 @@
     G.spec = spec;
     G.bins = Array.from({ length: nb }, (_, i) => ({
       x: in0 + gb + i * (spec.w + gb),
-      z: zB + p / 2 + 2,
+      z: zB + p / 2 + +P.binBack,
       w: spec.w, d: spec.d, h: spec.h,
       type: (P.binTypes && P.binTypes[i] != null) ? P.binTypes[i] : 0,
     }));
     G.zBackInner = zB + p / 2;
-    G.binFront = G.zBackInner + 2 + spec.d;
+    G.binFront = G.zBackInner + +P.binBack + spec.d;
     G.frontInner = P.front ? D - t - p : D;
     G.aisle = G.frontInner - G.binFront;
 
@@ -702,9 +718,27 @@
       else if (G.aisle >= spec.w - 8) warn(`Ulička před popelnicemi ${f(G.aisle)} cm je těsná, popelnici budete při otáčení naklánět.`);
       else bad(`Ulička ${f(G.aisle)} cm je užší než popelnice (${spec.w} cm). Krajní popelnici nevyvezete, zvětšete hloubku.`);
 
+      // Víko (osa u madla vzadu) se musí dostat za svislou polohu, jinak spadne zpět
+      const top = G.rails[0];
+      if (top) {
+        const pivotY = spec.h - 3, lidT = 4;
+        const railBot = top.y0, railTopY = top.y0 + p;
+        const have = +P.binBack;
+        const need = (railBot - pivotY) * Math.tan((8 * Math.PI) / 180) + lidT;
+        if (railBot >= pivotY + spec.d + 2) ok(`Otevřená víka (${f(pivotY + spec.d, 0)} cm) projdou pod horním zadním trámem.`);
+        else if (railTopY <= pivotY - 2) ok(`Horní zadní trám je pod osou vík, víka se otevřou volně.`);
+        else if (have >= need) ok(`Víka se opřou o horní zadní trám až za svislou polohou a zůstanou otevřená.`);
+        else warn(`Víka ${+P.binVol} l narazí na horní zadní trám dřív, než projdou svislou polohou, a budou padat zpět. Posuňte popelnice o ${Math.ceil(need - have)} cm dopředu, nebo snižte horní trám pod ${Math.floor(pivotY - 2)} cm.`);
+      }
+
       if (G.top >= spec.h + 5) ok(`Stěny ${f(G.top)} cm zakryjí popelnice (${spec.h} cm). Bez střechy jdou víka otevřít uvnitř.`);
       else warn(`Popelnice (${spec.h} cm) budou vyčnívat nad stěny (${f(G.top)} cm).`);
     }
+    if (!P.back) {
+      if (G.rails.length) ok(`Zadní rohové sloupky spojuje ${G.rails.length === 2 ? 'horní a spodní trám' : 'horní trám'}, bok u dveří má oporu.`);
+      else bad(`Zadní konce boků nic nespojuje. Bok u dveří pak stojí jen na dvou sloupcích a bude se viklat. Přidejte vodorovný trám vzadu.`);
+    }
+    if (G.door && p < 7) warn(`Sloupek se závěsy nese křídlo asi ${f(G.door.kg, 0)} kg. Hranol ${f(p)} × ${f(p)} cm se časem vyviklá a dveře poklesnou. Na sloupky u dveří dejte 7 × 7 nebo 10 × 10 cm.`);
     const where = maxWall ? ` (${maxWall})` : '';
     if (maxSp <= 100) ok(`Rozteč sloupků nejvýš ${f(maxSp)} cm${where}, prkno ${f(t * 10, 0)} mm drží rovně.`);
     else if (maxSp <= 120) warn(`Rozteč ${f(maxSp)} cm${where} je pro prkno ${f(t * 10, 0)} mm ještě použitelná, prkna se ale mohou mírně vlnit. Do 1 m je to jisté.`);
@@ -727,6 +761,7 @@
       pp.push({ label: 'Rám dveří, svislice', len: G.door.h, qty: 2 });
       pp.push({ label: 'Rám dveří, šikmá vzpěra', len: Math.ceil(G.door.diag.len + p), qty: 1 });
     }
+    G.rails.forEach((r) => pp.push({ label: r.label, len: Math.ceil(r.x1 - r.x0), qty: 1 }));
     G.postPieces = pp;
     G.postCut = cutStock(pp, +P.stockP);
 
@@ -955,6 +990,18 @@
       cons.add(m);
     });
 
+    G.rails.forEach((r) => {
+      const m = mesh(new THREE.BoxGeometry(r.x1 - r.x0, p, p), postMat);
+      m.position.set((r.x0 + r.x1) / 2, r.y0 + p / 2, G.zB);
+      cons.add(m);
+    });
+    if (G.door) {
+      const st = G.door.stop;
+      const m = mesh(new THREE.BoxGeometry(st.x1 - st.x0, G.door.h, p), postMat);
+      m.position.set((st.x0 + st.x1) / 2, G.g0 + G.door.h / 2, G.D - t - p / 2);
+      cons.add(m);
+    }
+
     // Dveře
     doorPivot = null;
     if (G.door) {
@@ -989,7 +1036,7 @@
       });
       const knob = mesh(new THREE.CylinderGeometry(2.2, 2.2, 5, 20), metal);
       knob.rotation.x = Math.PI / 2;
-      knob.position.set(-d.w + 9, Math.min(100, G.top - 25), 2.5);
+      knob.position.set(-d.w + 5, Math.min(100, G.top - 25), 2.5);
       doorPivot.add(knob);
       setDoorAngle(+P.door);
     }
@@ -1023,7 +1070,7 @@
     g.add(lid);
     const handle = mesh(new THREE.CylinderGeometry(1.5, 1.5, b.w - 12, 12), dark);
     handle.rotation.z = Math.PI / 2;
-    handle.position.set(0, bodyH - 1, -b.d / 2 - 1.5);
+    handle.position.set(0, bodyH - 1, -b.d / 2 + 1.5);
     g.add(handle);
     const wGeo = new THREE.CylinderGeometry(10, 10, 5, 24);
     [-1, 1].forEach((s) => {
@@ -1128,8 +1175,10 @@
     // Vnitřní líc sloupků (tečkovaně)
     s += `<rect x="${t + p}" y="${G.zBackInner}" width="${L - 2 * (t + p)}" height="${D - t - p - G.zBackInner}" class="sv-hidden" style="stroke-dasharray:1 3"/>`;
 
-    // Sloupky
+    // Sloupky, zadní trámy, doraz dveří
+    G.rails.slice(0, 1).forEach((r) => { const [x, w] = rx(r.x0, r.x1); s += rect(x, G.zB - p / 2, w, p, 'sv-post'); });
     G.posts.forEach((q) => { s += rect(mx(q.x) - p / 2, q.z - p / 2, p, p, 'sv-post'); });
+    if (G.door) { const [x, w] = rx(G.door.stop.x0, G.door.stop.x1); s += rect(x, D - t - p, w, p, 'sv-post'); }
 
     // Popelnice
     G.bins.forEach((b, i) => {
@@ -1153,7 +1202,7 @@
         const x0 = v.x0 - L, x1 = v.x1 - L;
         s += poly([[x0, -t - p], [x1, -t - p], [x1, -t], [x0, -t]], 'sv-post');
       });
-      const [hx, hz] = rot(-dw + 9, 3);
+      const [hx, hz] = rot(-dw + 5, 3);
       s += `<circle cx="${mx(hx)}" cy="${hz}" r="${fs * 0.28}" class="sv-thin"/>`;
     }
 
@@ -1162,7 +1211,6 @@
     s += dimY(0, D, -fs * 2.4, 0, 0, `${f(D)}`, fs);
     if (G.door) {
       const yb = D + dw + fs * 2.6;
-      const [a1] = rx(0, L - dw);
       s += dimX(mx(0), mx(L - dw), yb, D, D, `${f(L - dw)}`, fs);
       s += dimX(mx(L - dw), mx(L), yb, D, D + dw, `${f(dw)}`, fs);
       s += `<text x="${mx(L - dw / 2)}" y="${D + dw * 0.55}" font-size="${fs * 0.85}" text-anchor="middle" class="sv-muted">dveře ${f(dw)}</text>`;
@@ -1207,7 +1255,8 @@
         [d.latchV, d.hingeV].forEach((v) => { s += rect(Math.min(mx(v.x0), mx(v.x1)), Y(top), p, d.h, 'sv-hidden'); });
         s += line(mx(d.diag.x1), Y(d.diag.y1), mx(d.diag.x2), Y(d.diag.y2), 'sv-hidden');
         s += rect(Math.min(mx(L - d.w), mx(L)), Y(top), d.w, d.h, 'sv-thick');
-        s += `<circle cx="${mx(L - d.w + 9)}" cy="${Y(Math.min(100, top - 25))}" r="${fs * 0.45}" class="sv-thick"/>`;
+        s += rect(Math.min(mx(d.stop.x0), mx(d.stop.x1)), Y(top), d.stop.x1 - d.stop.x0, d.h, 'sv-hidden');
+        s += `<circle cx="${mx(L - d.w + 5)}" cy="${Y(Math.min(100, top - 25))}" r="${fs * 0.45}" class="sv-thick"/>`;
         const hy = d.hinges === 3 ? [G.g0 + 14, G.g0 + d.h / 2, top - 14] : [G.g0 + 14, top - 14];
         hy.forEach((y) => { s += rect(Math.min(mx(L - 30), mx(L)), Y(y + 2), 30, 4, 'sv-post', 'style="fill:var(--draw-ink)"'); });
       }
@@ -1284,11 +1333,13 @@
     const boardRows = G.boardPieces.map((x) => `<tr><td>${esc(x.label)}</td><td class="n">${x.qty}</td><td class="n">${f(x.len)} cm</td><td class="n">${f((x.len * x.qty) / 100, 2)} m</td></tr>`).join('');
     const postRows = G.postPieces.map((x) => `<tr><td>${esc(x.label)}</td><td class="n">${x.qty}</td><td class="n">${f(x.len)} cm</td><td class="n">${f((x.len * x.qty) / 100, 2)} m</td></tr>`).join('');
     const hw = [
-      [`Vrut do dřeva nerez A2, ${f(G.screwLen / 10, 1)} × ${G.screwLen} mm (2 na každé křížení prkna se sloupkem, +10 %)`, `${G.screwsBuy} ks`],
+      [`Vrut do dřeva nerez A2, 4 × ${G.screwLen} mm (2 na každé křížení prkna se sloupkem, +10 %)`, `${G.screwsBuy} ks`],
+      ...(G.rails.length ? [[`Úhelník pro spoj trámu se sloupkem`, `${G.rails.length * 4} ks`]] : []),
       [`Kotva sloupku ${f(G.p * 10, 0)} × ${f(G.p * 10, 0)} mm (patka do betonu nebo zemní vrut)`, `${G.posts.length} ks`],
     ];
     if (G.door) {
-      hw.push([`Pásový závěs, venkovní provedení`, `${G.door.hinges} ks`]);
+      hw.push([`Pásový závěs s protikusem na bok (${P.doorSide === 'left' ? 'levá' : 'pravá'} stěna), venkovní provedení`, `${G.door.hinges} ks`]);
+      hw.push([`Lať 3 × 5 cm jako doraz dveří, délka ${f(G.door.h)} cm`, `1 ks`]);
       hw.push([`Zástrčka nebo západka na dveře`, `1 ks`]);
       hw.push([`Madlo / knoflík`, `1 ks`]);
       hw.push([`Zarážka proti přirážení dveří (volitelně)`, `1 ks`]);
@@ -1355,8 +1406,10 @@
           <li>Vytyčte obdélník ${f(G.L)} × ${f(G.D)} cm a srovnejte podklad (dlažba nebo štěrk).</li>
           <li>Osaďte ${G.posts.length} kotev podle půdorysu, rozteče os sloupků najdete v nárysu. Osy rohových sloupků jsou ${f(G.t + G.p / 2)} cm od vnější hrany prken${P.back ? '' : ', zadní rohové sloupky stojí těsně u plotu'}.</li>
           <li>Přišroubujte sloupky ${f(G.top)} cm a zkontrolujte svislost vodováhou.</li>
+          ${G.rails.length ? `<li>Zadní rohové sloupky spojte ${G.rails.length === 2 ? 'horním a spodním trámem' : 'horním trámem'} ${f(G.rails[0].x1 - G.rails[0].x0)} cm přes úhelníky, ještě než přišroubujete prkna boků.</li>` : ''}
           <li>Prkna montujte odspodu, první ${f(G.g0)} cm nad terénem, mezera ${f(G.gap, 2)} cm (vložte distanční lať). Šikmé hrany rhombusu otočte tak, aby horní hrana padala ven a voda odtékala.</li>
-          <li>Dveře sestavte naplocho: dvě svislice, šikmá vzpěra od spodního závěsu k hornímu rohu u zámku, pak prkna. Zavěste je na rohový sloupek.</li>
+          <li>Na bok zámkového sloupku přišroubujte lať 3 × 5 cm jako doraz. Dveře na ni dosednou a nezatěžují závěsy, když do nich někdo zatlačí zevnitř.</li>
+          <li>Dveře sestavte naplocho: dvě svislice, šikmá vzpěra od spodního závěsu k hornímu rohu u zámku, pak prkna. Závěsy přišroubujte protikusem na bok stěny, vruty až do rohového sloupku.</li>
         </ol>
       </section>`;
 
@@ -1372,7 +1425,7 @@
     G.boardPieces.forEach((x) => L.push(`  - ${x.label}: ${x.qty} × ${f(x.len)} cm`));
     L.push(`Hranol ${f(G.p * 10, 0)} × ${f(G.p * 10, 0)} mm: ${pc.count} ks à ${f(pc.stock / 100, 1)} m (${f(pc.bought / 100, 1)} bm)`);
     G.postPieces.forEach((x) => L.push(`  - ${x.label}: ${x.qty} × ${f(x.len)} cm`));
-    L.push(`Vruty nerez ${f(G.screwLen / 10, 1)} × ${G.screwLen} mm: ${G.screwsBuy} ks`);
+    L.push(`Vruty nerez 4 × ${G.screwLen} mm: ${G.screwsBuy} ks`);
     L.push(`Kotvy sloupků: ${G.posts.length} ks`);
     if (G.door) L.push(`Závěsy: ${G.door.hinges} ks, zástrčka 1 ks, madlo 1 ks`);
     return L.join('\n');
