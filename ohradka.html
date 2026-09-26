@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Ohrádka na popelnice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #e7eae1;
+    --surface: #f5f6f1;
+    --surface-2: #dde2d4;
+    --ink: #1c2419;
+    --muted: #596452;
+    --line: #c2c9b6;
+    --accent: #8a5520;
+    --accent-ink: #fffaf2;
+    --accent-soft: #eadbc3;
+    --ok: #2d7338;
+    --warn: #94600c;
+    --bad: #ae3326;
+    --ok-soft: #dcebd8;
+    --warn-soft: #f2e3c4;
+    --bad-soft: #f3d9d4;
+    --scene-bg: #dfe6da;
+    --grass: #8aa46a;
+    --pad: #bdbbb2;
+    --draw-ink: #27311f;
+    --dim: #8a5520;
+    --board-fill: #dcb98f;
+    --post-fill: #a8794b;
+    --hidden: #6f7a64;
+    --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+    --font-body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #151912;
+      --surface: #1d2319;
+      --surface-2: #283022;
+      --ink: #e6e0cb;
+      --muted: #9ca58d;
+      --line: #363f2d;
+      --accent: #dba263;
+      --accent-ink: #1b1309;
+      --accent-soft: #3b2f1e;
+      --ok: #79c285;
+      --warn: #e3ac48;
+      --bad: #ea7466;
+      --ok-soft: #1f3322;
+      --warn-soft: #3a2e17;
+      --bad-soft: #3d1f1b;
+      --scene-bg: #1a2016;
+      --grass: #3b4d2e;
+      --pad: #55544e;
+      --draw-ink: #ddd7c2;
+      --dim: #dba263;
+      --board-fill: #7e6040;
+      --post-fill: #5d4128;
+      --hidden: #8a937c;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #151912;
+    --surface: #1d2319;
+    --surface-2: #283022;
+    --ink: #e6e0cb;
+    --muted: #9ca58d;
+    --line: #363f2d;
+    --accent: #dba263;
+    --accent-ink: #1b1309;
+    --accent-soft: #3b2f1e;
+    --ok: #79c285;
+    --warn: #e3ac48;
+    --bad: #ea7466;
+    --ok-soft: #1f3322;
+    --warn-soft: #3a2e17;
+    --bad-soft: #3d1f1b;
+    --scene-bg: #1a2016;
+    --grass: #3b4d2e;
+    --pad: #55544e;
+    --draw-ink: #ddd7c2;
+    --dim: #dba263;
+    --board-fill: #7e6040;
+    --post-fill: #5d4128;
+    --hidden: #8a937c;
+  }
+
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 14px/1.45 var(--font-body);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+
+  .app {
+    height: 100%;
+    display: grid;
+    grid-template-columns: 330px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 12px;
+    padding-block: 12px;
+    padding-inline: 16px;
+  }
+
+  /* Header */
+  .top {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px 20px;
+  }
+  .brand { display: flex; flex-direction: column; gap: 2px; }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 30px;
+    line-height: 1;
+    letter-spacing: .01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .sub { color: var(--muted); font-size: 13px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 4px 8px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .chip b { font-weight: 500; color: var(--accent); }
+
+  /* Panel */
+  .panel {
+    overflow: auto;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 4px 14px 16px;
+  }
+  fieldset {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin: 0;
+    padding: 12px 0 6px;
+  }
+  fieldset:first-of-type { border-top: 0; }
+  legend, .h-label {
+    font-family: var(--font-display);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-size: 13px;
+    color: var(--accent);
+    padding: 0;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 104px;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .row label { font-size: 13px; }
+  .num {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--bg);
+  }
+  .num:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .num input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ink);
+    font: 13px var(--font-mono);
+    padding: 5px 4px 5px 6px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    outline: none;
+  }
+  .num span { color: var(--muted); font-size: 11px; padding-right: 6px; }
+  select {
+    width: 100%;
+    font: 13px var(--font-body);
+    padding: 5px 6px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .checks-row { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; }
+  .checks-row label, .toggle { display: flex; gap: 6px; align-items: center; font-size: 13px; cursor: pointer; }
+  input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; }
+  .hint { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+  .hint a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .btn {
+    font: 500 13px var(--font-body);
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+  /* Checks */
+  .checks { list-style: none; padding: 0; margin: 8px 0 4px; display: flex; flex-direction: column; gap: 7px; }
+  .checks li { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 8px; align-items: start; font-size: 12.5px; line-height: 1.4; }
+  .pill {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    padding: 2px 0;
+    border-radius: 3px;
+    text-align: center;
+  }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.bad { background: var(--bad-soft); color: var(--bad); }
+
+  /* Stage */
+  .stage {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px; border-bottom: 1px solid var(--line); }
+  .tab {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: .03em;
+    padding: 5px 14px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
+  .view { flex: 1; min-height: 0; position: relative; overflow: auto; }
+  #v-3d { overflow: hidden; background: var(--scene-bg); }
+  #v-3d canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  .gl-error { padding: 24px; color: var(--muted); }
+
+  .toolbar3d {
+    position: absolute;
+    left: 10px; right: 10px; bottom: 10px;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    pointer-events: none;
+  }
+  .toolbar3d > * { pointer-events: auto; }
+  .seg { display: flex; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  .seg button {
+    font: 500 12px var(--font-body);
+    border: 0; border-right: 1px solid var(--line);
+    background: transparent; color: var(--ink);
+    padding: 6px 10px; cursor: pointer;
+  }
+  .seg button:last-child { border-right: 0; }
+  .seg button:hover { background: var(--accent-soft); }
+  .doorctl {
+    display: flex; gap: 8px; align-items: center;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
+    padding: 4px 10px; font-size: 12px;
+  }
+  .doorctl input[type="range"] { accent-color: var(--accent); width: 130px; }
+  .doorctl output { font-family: var(--font-mono); min-width: 3.2em; text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* Drawings */
+  .drawing { padding: 14px 16px 20px; display: flex; flex-direction: column; gap: 22px; }
+  figure { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+  figcaption { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: baseline; }
+  figcaption .note { color: var(--muted); font-size: 12px; }
+  .svgwrap { overflow-x: auto; }
+  .svgwrap svg { display: block; width: 100%; min-width: 520px; height: auto; max-height: 72vh; }
+  .sv-board { fill: var(--board-fill); stroke: var(--draw-ink); stroke-width: .8; vector-effect: non-scaling-stroke; }
+  .sv-post { fill: var(--post-fill); stroke: var(--draw-ink); stroke-width: .8; vector-effect: non-scaling-stroke; }
+  .sv-hidden { fill: none; stroke: var(--hidden); stroke-width: .9; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; }
+  .sv-thick { fill: none; stroke: var(--draw-ink); stroke-width: 2; vector-effect: non-scaling-stroke; }
+  .sv-thin { fill: none; stroke: var(--draw-ink); stroke-width: .7; vector-effect: non-scaling-stroke; }
+  .sv-swing { fill: none; stroke: var(--draw-ink); stroke-width: .8; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }
+  .sv-pad { fill: var(--surface-2); stroke: none; }
+  .sv-bin { stroke: var(--draw-ink); stroke-width: .8; vector-effect: non-scaling-stroke; }
+  .sv-text { fill: var(--draw-ink); font-family: var(--font-mono); }
+  .sv-bintext { fill: #fff; font-family: var(--font-display); font-weight: 700; }
+  .sv-muted { fill: var(--muted); font-family: var(--font-body); }
+  .dim line, .dim path { stroke: var(--dim); stroke-width: .8; vector-effect: non-scaling-stroke; fill: none; }
+  .dim text { fill: var(--dim); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .sv-ground { stroke: var(--draw-ink); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+  .sv-hatch { stroke: var(--hidden); stroke-width: .7; vector-effect: non-scaling-stroke; }
+
+  /* Materials */
+  .mat { padding: 16px; display: grid; gap: 26px; max-width: 1040px; }
+  .mat h2 {
+    font-family: var(--font-display);
+    font-size: 21px;
+    font-weight: 600;
+    margin: 0 0 8px;
+    text-wrap: balance;
+  }
+  .mat-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+  .kpi { border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; background: var(--bg); display: flex; flex-direction: column; gap: 2px; }
+  .kpi .v { font-family: var(--font-display); font-size: 28px; font-weight: 600; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .kpi .l { color: var(--muted); font-size: 12px; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 26px; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--line); padding: 6px 8px; }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; vertical-align: top; }
+  th.n, td.n { text-align: right; font-family: var(--font-mono); white-space: nowrap; }
+  tfoot td { font-weight: 600; border-bottom: 0; }
+  .cuts { display: flex; flex-direction: column; gap: 6px; }
+  .cut { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px; align-items: center; font-family: var(--font-mono); font-size: 12px; }
+  .bar {
+    display: flex; height: 24px;
+    border: 1px solid var(--line); border-radius: 3px; overflow: hidden;
+    background: repeating-linear-gradient(45deg, var(--surface-2) 0 4px, transparent 4px 8px);
+  }
+  .piece {
+    background: var(--board-fill);
+    border-right: 2px solid var(--surface);
+    font: 11px var(--font-mono);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink); overflow: hidden; white-space: nowrap;
+  }
+  .steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; max-width: 70ch; }
+  .muted { color: var(--muted); }
+  .copied { color: var(--ok); font-size: 12px; }
+
+  @media (max-width: 860px) {
+    html, body { height: auto; }
+    .app { height: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; }
+    .stage { order: 1; height: 66vh; min-height: 380px; }
+    .panel { order: 2; overflow: visible; }
+    .doorctl input[type="range"] { width: 100px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Ohrádka na popelnice</h1>
+      <div class="sub">Rám z hranolů, opláštění rhombus prkny, bez střechy. Rozměry v cm.</div>
+    </div>
+    <div class="chips" id="summary"></div>
+  </header>
+
+  <aside class="panel" aria-label="Parametry">
+    <fieldset>
+      <legend>Kontroly návrhu</legend>
+      <ul class="checks" id="checks"></ul>
+    </fieldset>
+
+    <fieldset>
+      <legend>Rozměry (vnější)</legend>
+      <div class="row"><label for="f-L">Délka</label><div class="num"><input id="f-L" data-k="L" type="number" min="100" max="800" step="1"><span>cm</span></div></div>
+      <div class="row"><label for="f-D">Hloubka</label><div class="num"><input id="f-D" data-k="D" type="number" min="60" max="300" step="1"><span>cm</span></div></div>
+      <div class="row"><label for="f-H">Výška</label><div class="num"><input id="f-H" data-k="H" type="number" min="60" max="250" step="1"><span>cm</span></div></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Dveře</legend>
+      <div class="row"><label for="f-doorW">Šířka křídla</label><div class="num"><input id="f-doorW" data-k="doorW" type="number" min="40" max="250" step="1"><span>cm</span></div></div>
+      <div class="row"><label for="f-doorSide">Umístění</label>
+        <select id="f-doorSide" data-k="doorSide"><option value="right">vpravo</option><option value="left">vlevo</option></select></div>
+      <p class="hint">Dveře jsou v přední stěně u rohu, závěsy na rohovém sloupku, otevírají se ven.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Rhombus prkna</legend>
+      <div class="row"><label for="f-bw">Šířka (výška na stěně)</label><div class="num"><input id="f-bw" data-k="bw" type="number" min="4" max="20" step="0.1"><span>cm</span></div></div>
+      <div class="row"><label for="f-bt">Tloušťka</label><div class="num"><input id="f-bt" data-k="bt" type="number" min="1" max="4" step="0.1"><span>cm</span></div></div>
+      <div class="row"><label for="f-gap">Mezera mezi prkny</label><div class="num"><input id="f-gap" data-k="gap" type="number" min="0" max="5" step="0.1"><span>cm</span></div></div>
+      <div class="row"><label for="f-g0">Odsazení od země</label><div class="num"><input id="f-g0" data-k="g0" type="number" min="0" max="20" step="0.5"><span>cm</span></div></div>
+      <div class="checks-row"><label for="f-fit"><input id="f-fit" data-k="fit" type="checkbox"> Dorovnat mezery na přesnou výšku</label></div>
+      <div class="row"><label for="f-wood">Povrch</label><select id="f-wood" data-k="wood"></select></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Konstrukce</legend>
+      <div class="row"><label for="f-post">Hranol (průřez)</label><div class="num"><input id="f-post" data-k="post" type="number" min="3" max="12" step="0.5"><span>cm</span></div></div>
+      <div class="row"><label for="f-maxSpan">Max. rozteč sloupků</label><div class="num"><input id="f-maxSpan" data-k="maxSpan" type="number" min="30" max="200" step="5"><span>cm</span></div></div>
+      <div class="checks-row" role="group" aria-label="Opláštěné strany">
+        <label for="f-back"><input id="f-back" data-k="back" type="checkbox"> Zadní</label>
+        <label for="f-left"><input id="f-left" data-k="left" type="checkbox"> Levá</label>
+        <label for="f-right"><input id="f-right" data-k="right" type="checkbox"> Pravá</label>
+        <label for="f-front"><input id="f-front" data-k="front" type="checkbox"> Přední s dveřmi</label>
+      </div>
+      <p class="hint">Vypněte stranu, která stojí u zdi nebo plotu.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Popelnice</legend>
+      <div class="row"><label for="f-binCount">Počet</label><div class="num"><input id="f-binCount" data-k="binCount" type="number" min="0" max="8" step="1"><span>ks</span></div></div>
+      <div class="row"><label for="f-binVol">Objem</label>
+        <select id="f-binVol" data-k="binVol"><option value="120">120 l (48 × 55 cm)</option><option value="240">240 l (58 × 73 cm)</option></select></div>
+      <div id="binTypes"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Nákup</legend>
+      <div class="row"><label for="f-stockB">Délka prkna</label><div class="num"><input id="f-stockB" data-k="stockB" type="number" min="100" max="600" step="10"><span>cm</span></div></div>
+      <div class="row"><label for="f-priceB">Cena prkna</label><div class="num"><input id="f-priceB" data-k="priceB" type="number" min="0" max="2000" step="1"><span>Kč/bm</span></div></div>
+      <div class="row"><label for="f-stockP">Délka hranolu</label><div class="num"><input id="f-stockP" data-k="stockP" type="number" min="100" max="600" step="10"><span>cm</span></div></div>
+      <div class="row"><label for="f-priceP">Cena hranolu</label><div class="num"><input id="f-priceP" data-k="priceP" type="number" min="0" max="2000" step="1"><span>Kč/bm</span></div></div>
+      <p class="hint">Ceny jsou jen příklad. Přepište je podle ceníku na <a href="https://www.palubky.eu/terasova-prkna/" target="_blank" rel="noopener">palubky.eu</a>.</p>
+    </fieldset>
+
+    <fieldset>
+      <button class="btn" id="reset" type="button">Obnovit rozměry z náčrtu</button>
+    </fieldset>
+  </aside>
+
+  <main class="stage">
+    <div class="tabs" role="tablist" aria-label="Pohledy">
+      <button class="tab" role="tab" id="t-3d" data-tab="3d" aria-controls="v-3d">3D model</button>
+      <button class="tab" role="tab" id="t-pudorys" data-tab="pudorys" aria-controls="v-pudorys">Půdorys</button>
+      <button class="tab" role="tab" id="t-narys" data-tab="narys" aria-controls="v-narys">Nárys a bokorys</button>
+      <button class="tab" role="tab" id="t-material" data-tab="material" aria-controls="v-material">Materiál</button>
+    </div>
+
+    <section class="view" id="v-3d" role="tabpanel" aria-labelledby="t-3d">
+      <div class="toolbar3d">
+        <div class="seg" role="group" aria-label="Pohled kamery">
+          <button type="button" data-cam="iso">Izometrie</button>
+          <button type="button" data-cam="front">Zepředu</button>
+          <button type="button" data-cam="top">Shora</button>
+          <button type="button" data-cam="side">Z boku</button>
+        </div>
+        <div class="doorctl">
+          <label for="f-door">Dveře</label>
+          <input id="f-door" type="range" min="0" max="110" step="1">
+          <output id="doorOut" for="f-door">0°</output>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="v-pudorys" role="tabpanel" aria-labelledby="t-pudorys" hidden>
+      <div class="drawing">
+        <figure>
+          <figcaption><span class="h-label">Půdorys</span><span class="note">Pohled shora, přední stěna s dveřmi dole. Čárkovaně oblouk otevření dveří.</span></figcaption>
+          <div class="svgwrap" id="svgPlan"></div>
+        </figure>
+      </div>
+    </section>
+
+    <section class="view" id="v-narys" role="tabpanel" aria-labelledby="t-narys" hidden>
+      <div class="drawing">
+        <figure>
+          <figcaption><span class="h-label">Nárys — pohled zepředu</span><span class="note">Čárkovaně sloupky a rám dveří za prkny. Nahoře rozteče os sloupků.</span></figcaption>
+          <div class="svgwrap" id="svgFront"></div>
+        </figure>
+        <figure>
+          <figcaption><span class="h-label">Bokorys — pravá strana</span><span class="note">Vlevo přední stěna, vpravo zadní.</span></figcaption>
+          <div class="svgwrap" id="svgSide"></div>
+        </figure>
+      </div>
+    </section>
+
+    <section class="view" id="v-material" role="tabpanel" aria-labelledby="t-material" hidden>
+      <div class="mat" id="mat"></div>
+    </section>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ============================================================
+  // Data
+  // ============================================================
+  const WOODS = {
+    smrk: { n: 'Smrk přírodní', c: '#d6ad73' },
+    modrin: { n: 'Sibiřský modřín', c: '#c98a50' },
+    thermo: { n: 'Thermo borovice', c: '#8c5b36' },
+    seda: { n: 'Šedá lazura', c: '#9d998f' },
+    antracit: { n: 'Antracit', c: '#4d5052' },
+  };
+  const BIN_TYPES = [
+    { n: 'Směsný odpad', c: '#2d3032' },
+    { n: 'Papír', c: '#2c5aa0' },
+    { n: 'Plast', c: '#dcae22' },
+    { n: 'Bio', c: '#77502d' },
+    { n: 'Sklo', c: '#3d7a3a' },
+    { n: 'Kov', c: '#8c9095' },
+  ];
+  // Běžné rozměry popelnic dle EN 840 (šířka × hloubka × výška se zavřeným víkem)
+  const BIN_SPECS = { 120: { w: 48, d: 55, h: 93 }, 240: { w: 58, d: 73, h: 107 } };
+  const DOOR_GAP = 1; // spára mezi dveřmi a pevnou částí [cm]
+  const KERF = 0.4;   // prořez pily [cm]
+
+  // Výchozí hodnoty podle ručního náčrtu: 358 × 154 × 160 cm, dveře 118 cm
+  const DEFAULTS = {
+    L: 358, D: 154, H: 160,
+    doorW: 118, doorSide: 'right', door: 30,
+    bw: 8, bt: 1.8, gap: 1, fit: true, g0: 3, wood: 'smrk',
+    post: 5, maxSpan: 80,
+    back: true, left: true, right: true, front: true,
+    binCount: 4, binVol: 240, binTypes: [0, 1, 2, 3, 4, 5, 0, 1],
+    stockB: 400, priceB: 49, stockP: 400, priceP: 35,
+  };
+  const STORE_KEY = 'ohradka-popelnice-v1';
+
+  let P = JSON.parse(JSON.stringify(DEFAULTS));
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+    if (saved && typeof saved === 'object') Object.assign(P, saved);
+  } catch (e) { /* bez úložiště */ }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(P)); } catch (e) { /* ignore */ }
+  }
+
+  // ============================================================
+  // Helpers
+  // ============================================================
+  const $ = (s) => document.querySelector(s);
+  function f(v, d = 1) {
+    const k = Math.pow(10, d);
+    const r = Math.round(v * k) / k;
+    return String(r).replace('.', ',');
+  }
+  function kc(v) {
+    return Math.round(v).toLocaleString('cs-CZ').replace(/ /g, ' ') + ' Kč';
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  }
+  function css(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  // ============================================================
+  // Výpočet geometrie a materiálu
+  // ============================================================
+  function derive(P) {
+    const L = +P.L, D = +P.D, H = +P.H, t = +P.bt, p = +P.post, w = +P.bw, g0 = +P.g0;
+    const G = { L, D, H, t, p, w, g0 };
+    const checks = [];
+    const ok = (s) => checks.push(['ok', s]);
+    const warn = (s) => checks.push(['warn', s]);
+    const bad = (s) => checks.push(['bad', s]);
+
+    // --- Prkna na výšku
+    const avail = H - g0;
+    let n, gap;
+    if (P.fit) {
+      n = Math.max(1, Math.round((avail + +P.gap) / (w + +P.gap)));
+      while (n > 1 && (avail - n * w) / (n - 1) < 0.2) n--;
+      gap = n > 1 ? (avail - n * w) / (n - 1) : 0;
+    } else {
+      gap = +P.gap;
+      n = Math.max(1, Math.floor((avail + gap) / (w + gap)));
+    }
+    G.n = n;
+    G.gap = gap;
+    G.top = g0 + n * w + (n - 1) * gap;
+    G.ys = Array.from({ length: n }, (_, i) => g0 + i * (w + gap));
+    G.bevel = Math.min(t * 0.45, w * 0.2);
+
+    // --- Dveře
+    const doorMax = L - 2 * t - 3 * p - DOOR_GAP - 10;
+    G.doorW = P.front ? Math.max(30, Math.min(+P.doorW, doorMax)) : 0;
+    const doorClamped = P.front && G.doorW !== +P.doorW;
+
+    // --- Sloupky
+    const c = t + p / 2, xL = c, xR = L - c, zB = c, zF = D - c;
+    const dist = (a, b) => {
+      const k = Math.max(1, Math.ceil((b - a) / +P.maxSpan - 1e-9));
+      return Array.from({ length: k + 1 }, (_, i) => a + (i * (b - a)) / k);
+    };
+    const wp = { back: [], front: [], left: [], right: [] };
+    if (P.back) wp.back = dist(xL, xR).map((x) => ({ x, z: zB }));
+    if (P.left) wp.left = dist(zB, zF).map((z) => ({ x: xL, z }));
+    if (P.right) wp.right = dist(zB, zF).map((z) => ({ x: xR, z }));
+    if (P.front) {
+      G.xLatch = L - G.doorW - DOOR_GAP - p / 2;
+      wp.front = dist(xL, G.xLatch).map((x) => ({ x, z: zF }));
+      wp.front.push({ x: xR, z: zF }); // sloupek pro závěsy
+    }
+    const posts = [];
+    const seen = new Set();
+    const add = (x, z) => {
+      const k = x.toFixed(2) + '|' + z.toFixed(2);
+      if (!seen.has(k)) { seen.add(k); posts.push({ x, z }); }
+    };
+    [[xL, zB], [xR, zB], [xL, zF], [xR, zF]].forEach(([x, z]) => add(x, z));
+    Object.values(wp).forEach((arr) => arr.forEach((q) => add(q.x, q.z)));
+    G.posts = posts;
+    G.wp = wp;
+
+    let maxSp = 0;
+    const spans = (arr, key) => {
+      for (let i = 1; i < arr.length; i++) maxSp = Math.max(maxSp, Math.abs(arr[i][key] - arr[i - 1][key]));
+    };
+    spans(wp.back, 'x'); spans(wp.left, 'z'); spans(wp.right, 'z');
+    spans(wp.front.slice(0, -1), 'x');
+    G.maxSpacing = maxSp;
+
+    // --- Úseky opláštění
+    const runs = [];
+    if (P.back) runs.push({ wall: 'back', a: 0, b: L, label: 'Zadní stěna' });
+    const zs = P.back ? t : 0, ze = P.front ? D - t : D;
+    if (P.left) runs.push({ wall: 'left', a: zs, b: ze, label: 'Levý bok' });
+    if (P.right) runs.push({ wall: 'right', a: zs, b: ze, label: 'Pravý bok' });
+    if (P.front) runs.push({ wall: 'front', a: 0, b: L - G.doorW - DOOR_GAP, label: 'Přední stěna, pevná část' });
+    runs.forEach((r) => (r.len = r.b - r.a));
+    G.runs = runs;
+
+    // --- Křídlo dveří (rám: 2 svislice + vzpěra, prkna přes celé křídlo)
+    G.door = null;
+    if (P.front) {
+      const dw = G.doorW;
+      const d = {
+        w: dw,
+        h: G.top - g0,
+        latchV: { x0: L - dw, x1: L - dw + p },
+        hingeV: { x0: L - t - 2 * p - DOOR_GAP, x1: L - t - p - DOOR_GAP },
+      };
+      const x1 = d.hingeV.x0, y1 = g0 + p * 0.5, x2 = d.latchV.x1, y2 = G.top - p * 0.5;
+      d.diag = { x1, y1, x2, y2, len: Math.hypot(x1 - x2, y2 - y1) };
+      d.clear = dw + DOOR_GAP - t - p; // světlý průchod při otevření na 90°
+      d.hinges = d.h > 120 ? 3 : 2;
+      G.door = d;
+    }
+
+    // --- Popelnice
+    const spec = BIN_SPECS[+P.binVol] || BIN_SPECS[240];
+    const nb = Math.max(0, Math.min(8, Math.round(+P.binCount)));
+    const in0 = t + p, in1 = L - t - p, innerL = in1 - in0;
+    const free = innerL - nb * spec.w;
+    const gb = nb ? free / (nb + 1) : 0;
+    G.spec = spec;
+    G.bins = Array.from({ length: nb }, (_, i) => ({
+      x: in0 + gb + i * (spec.w + gb),
+      z: t + p + 2,
+      w: spec.w, d: spec.d, h: spec.h,
+      type: (P.binTypes && P.binTypes[i] != null) ? P.binTypes[i] : 0,
+    }));
+    G.binFront = t + p + 2 + spec.d;
+    G.frontInner = P.front ? D - t - p : D;
+    G.aisle = G.frontInner - G.binFront;
+
+    // --- Kontroly
+    if (nb) {
+      if (free < 0) bad(`${nb} popelnice (${nb} × ${spec.w} cm) se nevejdou do vnitřní délky ${f(innerL)} cm.`);
+      else if (gb < 4) warn(`Popelnice stojí těsně vedle sebe, mezera jen ${f(gb)} cm. Počítejte aspoň se 4 cm.`);
+      else ok(`${nb} popelnice po ${spec.w} cm se vejdou, mezery ${f(gb)} cm.`);
+
+      if (P.front) {
+        const d = G.door;
+        if (d.clear >= spec.w + 10) ok(`Průchod dveřmi ${f(d.clear)} cm, popelnice (${spec.w} cm) projede.`);
+        else if (d.clear >= spec.w + 2) warn(`Průchod dveřmi ${f(d.clear)} cm je pro popelnici ${spec.w} cm těsný.`);
+        else bad(`Průchod dveřmi ${f(d.clear)} cm je užší než popelnice (${spec.w} cm).`);
+      }
+
+      if (G.aisle >= spec.w + 5) ok(`Ulička před popelnicemi ${f(G.aisle)} cm. Popelnici otočíte a vyvezete ke dveřím.`);
+      else if (G.aisle >= spec.w - 8) warn(`Ulička před popelnicemi ${f(G.aisle)} cm je těsná, popelnici budete při otáčení naklánět.`);
+      else bad(`Ulička ${f(G.aisle)} cm je užší než popelnice (${spec.w} cm). Krajní popelnici nevyvezete, zvětšete hloubku.`);
+
+      if (G.top >= spec.h + 5) ok(`Stěny ${f(G.top)} cm zakryjí popelnice (${spec.h} cm). Bez střechy jdou víka otevřít uvnitř.`);
+      else warn(`Popelnice (${spec.h} cm) budou vyčnívat nad stěny (${f(G.top)} cm).`);
+    }
+    if (+P.maxSpan <= 80) ok(`Rozteč sloupků nejvýš ${f(maxSp)} cm, prkno ${f(t * 10, 0)} mm se neprohne.`);
+    else if (+P.maxSpan <= 100) warn(`Rozteč až ${f(maxSp)} cm je pro prkno ${f(t * 10, 0)} mm na hraně, může se prohýbat a kroutit. Doporučeno do 80 cm.`);
+    else bad(`Rozteč ${f(maxSp)} cm je pro prkno ${f(t * 10, 0)} mm příliš velká. Snižte max. rozteč na 80 cm.`);
+    if (doorClamped) bad(`Dveře ${f(+P.doorW)} cm se do přední stěny nevejdou, model je zkrátil na ${f(G.doorW)} cm.`);
+    else if (P.front && G.doorW > 120) warn(`Křídlo širší než 120 cm je těžké a časem poklesne. Zvažte dvoukřídlé dveře.`);
+    if (!P.fit && H - G.top > 0.5) warn(`Horní hrana vyjde na ${f(G.top)} cm, o ${f(H - G.top)} cm níž než zadaná výška. Zapněte dorovnání mezer.`);
+    if (P.fit && n > 1) ok(`${n} prken v řadě, mezera dorovnána na ${f(gap, 2)} cm, horní hrana přesně ${f(G.top)} cm.`);
+    G.checks = checks;
+
+    // --- Materiál: prkna
+    const pieces = runs.map((r) => ({ label: r.label, len: r.len, qty: n }));
+    if (G.door) pieces.push({ label: 'Dveře', len: G.door.w, qty: n });
+    G.boardPieces = pieces;
+    G.boardCut = cutStock(pieces, +P.stockB);
+
+    // --- Materiál: hranoly
+    const pp = [{ label: 'Sloupky', len: G.top, qty: posts.length }];
+    if (G.door) {
+      pp.push({ label: 'Rám dveří, svislice', len: G.door.h, qty: 2 });
+      pp.push({ label: 'Rám dveří, šikmá vzpěra', len: Math.ceil(G.door.diag.len + p), qty: 1 });
+    }
+    G.postPieces = pp;
+    G.postCut = cutStock(pp, +P.stockP);
+
+    // --- Vruty: 2 na každé křížení prkna se sloupkem
+    let cross = 0;
+    if (P.back) cross += n * wp.back.length;
+    if (P.left) cross += n * wp.left.length;
+    if (P.right) cross += n * wp.right.length;
+    if (P.front) cross += n * (wp.front.length - 1) + n * 3; // pevná část + křídlo (2 svislice + vzpěra)
+    G.screws = cross * 2;
+    G.screwsBuy = Math.ceil((G.screws * 1.1) / 50) * 50;
+    G.screwLen = Math.ceil((t * 10 + 30) / 5) * 5;
+
+    G.costB = (G.boardCut.bought / 100) * +P.priceB;
+    G.costP = (G.postCut.bought / 100) * +P.priceP;
+    return G;
+  }
+
+  // First-fit decreasing: rozřez kusů ze skladových délek
+  function cutStock(pieces, stock) {
+    const items = [];
+    let splits = 0;
+    pieces.forEach((pc) => {
+      const k = pc.len > stock ? Math.ceil(pc.len / stock) : 1;
+      if (k > 1) splits += pc.qty;
+      for (let q = 0; q < pc.qty; q++) for (let j = 0; j < k; j++) items.push(Math.round((pc.len / k) * 10) / 10);
+    });
+    items.sort((a, b) => b - a);
+    const bars = [];
+    for (const len of items) {
+      let bar = bars.find((b) => b.used + (b.cuts.length ? KERF : 0) + len <= stock + 1e-6);
+      if (!bar) { bar = { used: 0, cuts: [] }; bars.push(bar); }
+      bar.used += (bar.cuts.length ? KERF : 0) + len;
+      bar.cuts.push(len);
+    }
+    const groups = new Map();
+    bars.forEach((b) => {
+      const key = b.cuts.join('|');
+      const g = groups.get(key) || { cuts: b.cuts, count: 0, rest: stock - b.used };
+      g.count++;
+      groups.set(key, g);
+    });
+    const used = items.reduce((s, x) => s + x, 0);
+    const bought = bars.length * stock;
+    return { count: bars.length, stock, groups: [...groups.values()], used, bought, waste: bought ? 1 - used / bought : 0, splits };
+  }
+
+  // ============================================================
+  // 3D
+  // ============================================================
+  let renderer, scene, camera, controls, root, doorPivot, grassMat, padMat, sun;
+  let woodTexBoard, woodTexPost;
+  let has3D = false;
+
+  function makeWoodCanvas() {
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 512;
+    const x = c.getContext('2d');
+    x.fillStyle = '#ffffff';
+    x.fillRect(0, 0, 256, 512);
+    let seed = 7;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    for (let i = 0; i < 70; i++) {
+      const u = rnd() * 256;
+      x.strokeStyle = `rgba(80,50,20,${0.04 + rnd() * 0.12})`;
+      x.lineWidth = 0.5 + rnd() * 2.5;
+      x.beginPath();
+      x.moveTo(u, 0);
+      for (let v = 0; v <= 512; v += 16) x.lineTo(u + Math.sin(v / 70 + i) * 3, v);
+      x.stroke();
+    }
+    for (let i = 0; i < 5; i++) { // suky
+      const cx = rnd() * 256, cy = rnd() * 512;
+      x.fillStyle = 'rgba(90,55,25,0.18)';
+      x.beginPath(); x.ellipse(cx, cy, 3 + rnd() * 4, 7 + rnd() * 6, 0, 0, Math.PI * 2); x.fill();
+    }
+    return c;
+  }
+
+  function init3D() {
+    const el = $('#v-3d');
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+    } catch (e) {
+      el.insertAdjacentHTML('afterbegin', '<p class="gl-error">3D náhled se nepodařilo spustit (prohlížeč nepodporuje WebGL). Výkresy a materiál fungují dál.</p>');
+      return;
+    }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    el.insertBefore(renderer.domElement, el.firstChild);
+
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(36, 1, 5, 20000);
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.maxPolarAngle = Math.PI / 2 - 0.03;
+    controls.minDistance = 60;
+    controls.maxDistance = 3000;
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x5a6448, 0.62));
+    sun = new THREE.DirectionalLight(0xfff1dc, 0.95);
+    sun.position.set(-280, 520, 420);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    const sc = sun.shadow.camera;
+    sc.left = -450; sc.right = 450; sc.top = 450; sc.bottom = -450; sc.near = 10; sc.far = 1600;
+    sun.shadow.bias = -0.0006;
+    scene.add(sun);
+
+    grassMat = new THREE.MeshStandardMaterial({ color: 0x8aa46a, roughness: 1 });
+    const grass = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), grassMat);
+    grass.rotation.x = -Math.PI / 2;
+    grass.position.y = -0.4;
+    grass.receiveShadow = true;
+    scene.add(grass);
+    padMat = new THREE.MeshStandardMaterial({ color: 0xbdbbb2, roughness: 0.95 });
+
+    const wc = makeWoodCanvas();
+    woodTexBoard = new THREE.CanvasTexture(wc);
+    woodTexBoard.wrapS = woodTexBoard.wrapT = THREE.RepeatWrapping;
+    woodTexBoard.repeat.set(1 / 24, 1 / 160);
+    woodTexBoard.encoding = THREE.sRGBEncoding;
+    woodTexPost = new THREE.CanvasTexture(wc);
+    woodTexPost.encoding = THREE.sRGBEncoding;
+
+    has3D = true;
+    applyTheme3D();
+    new ResizeObserver(resize3D).observe(el);
+    resize3D();
+    loop();
+  }
+
+  function resize3D() {
+    if (!has3D) return;
+    const el = $('#v-3d');
+    const w = el.clientWidth, h = el.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+
+  function applyTheme3D() {
+    if (!has3D) return;
+    scene.background = new THREE.Color(css('--scene-bg') || '#dfe6da');
+    grassMat.color.set(css('--grass') || '#8aa46a');
+    padMat.color.set(css('--pad') || '#bdbbb2');
+  }
+
+  function disposeTree(obj) {
+    obj.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material && o.material !== padMat) {
+        (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
+      }
+    });
+  }
+
+  function mesh(geo, mat) {
+    const m = new THREE.Mesh(geo, mat);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    return m;
+  }
+
+  function build3D(G) {
+    if (!has3D) return;
+    if (root) { scene.remove(root); disposeTree(root); }
+    root = new THREE.Group();
+    const inner = new THREE.Group();
+    inner.position.set(-G.L / 2, 0, -G.D / 2);
+    root.add(inner);
+
+    // Dlážděná plocha
+    const padD = G.D + (G.door ? G.door.w : 0) + 50;
+    const pad = new THREE.Mesh(new THREE.BoxGeometry(G.L + 50, 4, padD), padMat);
+    pad.position.set(G.L / 2, -2, -25 + padD / 2);
+    pad.receiveShadow = true;
+    inner.add(pad);
+
+    // Konstrukce (zrcadlí se podle strany dveří)
+    const cons = new THREE.Group();
+    if (P.doorSide === 'left') { cons.scale.x = -1; cons.position.x = G.L; }
+    inner.add(cons);
+
+    const woodColor = new THREE.Color((WOODS[P.wood] || WOODS.smrk).c);
+    const boardMat = new THREE.MeshStandardMaterial({ color: woodColor, map: woodTexBoard, roughness: 0.82 });
+    const postMat = new THREE.MeshStandardMaterial({ color: woodColor.clone().multiplyScalar(0.8), map: woodTexPost, roughness: 0.85 });
+
+    const t = G.t, p = G.p;
+    const geoCache = new Map();
+    const boardGeo = (len) => {
+      const k = len.toFixed(2);
+      if (!geoCache.has(k)) {
+        const s = new THREE.Shape();
+        s.moveTo(0, 0);
+        s.lineTo(0, G.w);
+        s.lineTo(t, G.w - G.bevel);
+        s.lineTo(t, -G.bevel);
+        s.closePath();
+        geoCache.set(k, new THREE.ExtrudeGeometry(s, { depth: len, bevelEnabled: false }));
+      }
+      return geoCache.get(k);
+    };
+    // lokální osa x profilu = směr ven ze stěny, z = podél stěny
+    const ang = { front: -Math.PI / 2, back: Math.PI / 2, left: Math.PI, right: 0 };
+    G.runs.forEach((r) => {
+      G.ys.forEach((y) => {
+        const m = mesh(boardGeo(r.len), boardMat);
+        m.rotation.y = ang[r.wall];
+        if (r.wall === 'back') m.position.set(r.a, y, t);
+        if (r.wall === 'front') m.position.set(r.b, y, G.D - t);
+        if (r.wall === 'left') m.position.set(t, y, r.b);
+        if (r.wall === 'right') m.position.set(G.L - t, y, r.a);
+        cons.add(m);
+      });
+    });
+
+    const postGeo = new THREE.BoxGeometry(p, G.top, p);
+    G.posts.forEach((q) => {
+      const m = mesh(postGeo, postMat);
+      m.position.set(q.x, G.top / 2, q.z);
+      cons.add(m);
+    });
+
+    // Dveře
+    doorPivot = null;
+    if (G.door) {
+      const d = G.door;
+      doorPivot = new THREE.Group();
+      doorPivot.position.set(G.L, 0, G.D);
+      cons.add(doorPivot);
+      G.ys.forEach((y) => {
+        const m = mesh(boardGeo(d.w), boardMat);
+        m.rotation.y = -Math.PI / 2;
+        m.position.set(0, y, -t);
+        doorPivot.add(m);
+      });
+      const vGeo = new THREE.BoxGeometry(p, d.h, p);
+      [d.latchV, d.hingeV].forEach((v) => {
+        const m = mesh(vGeo, postMat);
+        m.position.set((v.x0 + v.x1) / 2 - G.L, G.g0 + d.h / 2, -t - p / 2);
+        doorPivot.add(m);
+      });
+      const dg = d.diag;
+      const brace = mesh(new THREE.BoxGeometry(dg.len, p * 0.96, p * 0.96), postMat);
+      brace.position.set((dg.x1 + dg.x2) / 2 - G.L, (dg.y1 + dg.y2) / 2, -t - p / 2);
+      brace.rotation.z = Math.atan2(dg.y2 - dg.y1, dg.x2 - dg.x1);
+      doorPivot.add(brace);
+
+      const metal = new THREE.MeshStandardMaterial({ color: 0x2b2d2f, roughness: 0.45, metalness: 0.6 });
+      const hy = d.hinges === 3 ? [G.g0 + 14, G.g0 + d.h / 2, G.top - 14] : [G.g0 + 14, G.top - 14];
+      hy.forEach((y) => {
+        const h = mesh(new THREE.BoxGeometry(30, 4, 0.5), metal);
+        h.position.set(-15, y, 0.3);
+        doorPivot.add(h);
+      });
+      const knob = mesh(new THREE.CylinderGeometry(2.2, 2.2, 5, 20), metal);
+      knob.rotation.x = Math.PI / 2;
+      knob.position.set(-d.w + 9, Math.min(100, G.top - 25), 2.5);
+      doorPivot.add(knob);
+      setDoorAngle(+P.door);
+    }
+
+    // Popelnice
+    G.bins.forEach((b, i) => {
+      const g = makeBin(b, BIN_TYPES[b.type] ? BIN_TYPES[b.type].c : '#2d3032');
+      g.position.set(b.x + b.w / 2, 0, b.z + b.d / 2);
+      inner.add(g);
+    });
+
+    scene.add(root);
+  }
+
+  function makeBin(b, color) {
+    const g = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.55 });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x1b1c1d, roughness: 0.7 });
+    const bodyH = b.h - 7;
+    const geo = new THREE.BoxGeometry(b.w - 2, bodyH, b.d - 4, 1, 1, 1);
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      if (pos.getY(i) < 0) { pos.setX(i, pos.getX(i) * 0.86); pos.setZ(i, pos.getZ(i) * 0.88); }
+    }
+    geo.computeVertexNormals();
+    const body = mesh(geo, mat);
+    body.position.y = bodyH / 2 + 4;
+    g.add(body);
+    const lid = mesh(new THREE.BoxGeometry(b.w, 3, b.d), mat);
+    lid.position.set(0, bodyH + 5.5, 0);
+    g.add(lid);
+    const handle = mesh(new THREE.CylinderGeometry(1.5, 1.5, b.w - 12, 12), dark);
+    handle.rotation.z = Math.PI / 2;
+    handle.position.set(0, bodyH - 1, -b.d / 2 - 1.5);
+    g.add(handle);
+    const wGeo = new THREE.CylinderGeometry(10, 10, 5, 24);
+    [-1, 1].forEach((s) => {
+      const wh = mesh(wGeo, dark);
+      wh.rotation.z = Math.PI / 2;
+      wh.position.set(s * (b.w / 2 - 5), 10, -b.d / 2 + 6);
+      g.add(wh);
+    });
+    return g;
+  }
+
+  function setDoorAngle(deg) {
+    if (doorPivot) doorPivot.rotation.y = (deg * Math.PI) / 180;
+  }
+
+  function setCam(kind) {
+    if (!has3D) return;
+    const L = +P.L, D = +P.D, H = +P.H;
+    const s = Math.max(L, D * 1.6, 260);
+    const target = new THREE.Vector3(0, H * 0.38, (G && G.door ? G.door.w * 0.25 : 0));
+    let pos;
+    if (kind === 'front') pos = new THREE.Vector3(0, H * 0.6, s * 1.75);
+    else if (kind === 'top') pos = new THREE.Vector3(0.01, s * 2.1, 0.01 + 1);
+    else if (kind === 'side') pos = new THREE.Vector3(s * 1.7, H * 0.6, 0);
+    else pos = new THREE.Vector3(-s * 0.55, s * 1.0, s * 1.3);
+    camera.position.copy(pos);
+    controls.target.copy(target);
+    controls.update();
+  }
+
+  let activeTab = '3d';
+  function loop() {
+    requestAnimationFrame(loop);
+    if (activeTab !== '3d' || document.hidden) return;
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+  // ============================================================
+  // SVG výkresy
+  // ============================================================
+  function line(x1, y1, x2, y2, cls) {
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"${cls ? ` class="${cls}"` : ''}/>`;
+  }
+  function rect(x, y, w, h, cls, extra = '') {
+    return `<rect x="${Math.min(x, x + w)}" y="${Math.min(y, y + h)}" width="${Math.abs(w)}" height="${Math.abs(h)}" class="${cls}" ${extra}/>`;
+  }
+  // Vodorovná kóta: body (x1,ry1),(x2,ry2), kótovací čára ve výšce y
+  function dimX(x1, x2, y, ry1, ry2, label, fs) {
+    const a = Math.min(x1, x2), b = Math.max(x1, x2);
+    const tk = fs * 0.3, ov = fs * 0.3;
+    const dir1 = Math.sign(y - ry1) || 1, dir2 = Math.sign(y - ry2) || 1;
+    let s = '<g class="dim">';
+    s += line(a, ry1 + dir1 * fs * 0.25, a, y + dir1 * ov);
+    s += line(b, ry2 + dir2 * fs * 0.25, b, y + dir2 * ov);
+    s += line(a - ov, y, b + ov, y);
+    s += line(a - tk, y + tk, a + tk, y - tk) + line(b - tk, y + tk, b + tk, y - tk);
+    const tw = label.length * fs * 0.62;
+    if (b - a > tw + fs * 0.6) s += `<text x="${(a + b) / 2}" y="${y - fs * 0.35}" font-size="${fs}" text-anchor="middle">${label}</text>`;
+    else s += `<text x="${b + fs * 0.5}" y="${y - fs * 0.35}" font-size="${fs}" text-anchor="start">${label}</text>`;
+    return s + '</g>';
+  }
+  // Svislá kóta: body (rx1,y1),(rx2,y2), kótovací čára na x
+  function dimY(y1, y2, x, rx1, rx2, label, fs) {
+    const a = Math.min(y1, y2), b = Math.max(y1, y2);
+    const tk = fs * 0.3, ov = fs * 0.3;
+    const dir1 = Math.sign(x - rx1) || 1, dir2 = Math.sign(x - rx2) || 1;
+    let s = '<g class="dim">';
+    s += line(rx1 + dir1 * fs * 0.25, a, x + dir1 * ov, a);
+    s += line(rx2 + dir2 * fs * 0.25, b, x + dir2 * ov, b);
+    s += line(x, a - ov, x, b + ov);
+    s += line(x - tk, a + tk, x + tk, a - tk) + line(x - tk, b + tk, x + tk, b - tk);
+    const tw = label.length * fs * 0.62;
+    const tx = x - fs * 0.35;
+    if (b - a > tw + fs * 0.6) s += `<text x="${tx}" y="${(a + b) / 2}" font-size="${fs}" text-anchor="middle" transform="rotate(-90 ${tx} ${(a + b) / 2})">${label}</text>`;
+    else s += `<text x="${tx}" y="${a - fs * 0.5}" font-size="${fs}" text-anchor="end" transform="rotate(-90 ${tx} ${a - fs * 0.5})">${label}</text>`;
+    return s + '</g>';
+  }
+
+  function drawPlan(G) {
+    const L = G.L, D = G.D, t = G.t, p = G.p;
+    const right = P.doorSide !== 'left';
+    const mx = (x) => (right ? x : L - x);
+    const rx = (a, b) => [Math.min(mx(a), mx(b)), Math.abs(b - a)];
+    const fs = Math.max(L, D) / 36;
+    const dw = G.door ? G.door.w : 0;
+    const m = fs * 4.4;
+    const bottom = D + dw + fs * 5.5;
+    const vb = [-m, -m, L + 2 * m, bottom + m];
+    let s = `<svg viewBox="${vb.join(' ')}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Půdorys ohrádky">`;
+
+    s += rect(-18, -18, L + 36, D + dw + 30, 'sv-pad');
+
+    // Opláštění
+    G.runs.forEach((r) => {
+      if (r.wall === 'back') { const [x, w] = rx(r.a, r.b); s += rect(x, 0, w, t, 'sv-board'); }
+      if (r.wall === 'front') { const [x, w] = rx(r.a, r.b); s += rect(x, D - t, w, t, 'sv-board'); }
+      if (r.wall === 'left') { const [x, w] = rx(0, t); s += rect(x, r.a, w, r.len, 'sv-board'); }
+      if (r.wall === 'right') { const [x, w] = rx(L - t, L); s += rect(x, r.a, w, r.len, 'sv-board'); }
+    });
+
+    // Vnitřní líc sloupků (tečkovaně)
+    s += `<rect x="${t + p}" y="${t + p}" width="${L - 2 * (t + p)}" height="${D - 2 * (t + p)}" class="sv-hidden" style="stroke-dasharray:1 3"/>`;
+
+    // Sloupky
+    G.posts.forEach((q) => { s += rect(mx(q.x) - p / 2, q.z - p / 2, p, p, 'sv-post'); });
+
+    // Popelnice
+    G.bins.forEach((b, i) => {
+      const col = BIN_TYPES[b.type] ? BIN_TYPES[b.type].c : '#2d3032';
+      s += `<rect x="${b.x}" y="${b.z}" width="${b.w}" height="${b.d}" rx="${fs * 0.3}" class="sv-bin" fill="${col}" fill-opacity="0.88"/>`;
+      s += `<text x="${b.x + b.w / 2}" y="${b.z + b.d / 2 + fs * 0.1}" font-size="${fs * 1.9}" text-anchor="middle" class="sv-bintext">${i + 1}</text>`;
+      s += `<text x="${b.x + b.w / 2}" y="${b.z + b.d / 2 + fs * 1.6}" font-size="${fs * 0.72}" text-anchor="middle" class="sv-bintext" style="font-family:var(--font-body);font-weight:500">${esc(BIN_TYPES[b.type] ? BIN_TYPES[b.type].n : '')}</text>`;
+    });
+
+    // Dveře: oblouk + křídlo v aktuálním úhlu
+    if (G.door) {
+      const d = G.door;
+      const sweep = right ? 0 : 1;
+      s += `<path d="M ${mx(L - dw)} ${D} A ${dw} ${dw} 0 0 ${sweep} ${mx(L)} ${D + dw}" class="sv-swing"/>`;
+      s += line(mx(L), D, mx(L), D + dw, 'sv-swing');
+      const phi = (+P.door * Math.PI) / 180;
+      const rot = (x, z) => [L + x * Math.cos(phi) + z * Math.sin(phi), D - x * Math.sin(phi) + z * Math.cos(phi)];
+      const poly = (pts, cls) => `<polygon points="${pts.map(([x, z]) => { const [X, Z] = rot(x, z); return `${mx(X)},${Z}`; }).join(' ')}" class="${cls}"/>`;
+      s += poly([[-dw, -t], [0, -t], [0, 0], [-dw, 0]], 'sv-board');
+      [d.latchV, d.hingeV].forEach((v) => {
+        const x0 = v.x0 - L, x1 = v.x1 - L;
+        s += poly([[x0, -t - p], [x1, -t - p], [x1, -t], [x0, -t]], 'sv-post');
+      });
+      const [hx, hz] = rot(-dw + 9, 3);
+      s += `<circle cx="${mx(hx)}" cy="${hz}" r="${fs * 0.28}" class="sv-thin"/>`;
+    }
+
+    // Kóty
+    s += dimX(0, L, -fs * 2.4, 0, 0, `${f(L)}`, fs);
+    s += dimY(0, D, -fs * 2.4, 0, 0, `${f(D)}`, fs);
+    if (G.door) {
+      const yb = D + dw + fs * 2.6;
+      const [a1] = rx(0, L - dw);
+      s += dimX(mx(0), mx(L - dw), yb, D, D, `${f(L - dw)}`, fs);
+      s += dimX(mx(L - dw), mx(L), yb, D, D + dw, `${f(dw)}`, fs);
+      s += `<text x="${mx(L - dw / 2)}" y="${D + dw * 0.55}" font-size="${fs * 0.85}" text-anchor="middle" class="sv-muted">dveře ${f(dw)}</text>`;
+    }
+    if (G.bins.length) {
+      const b = G.bins[0];
+      const xa = b.x + b.w + Math.max(G.bins.length > 1 ? (G.bins[1].x - b.x - b.w) / 2 : fs * 2, fs * 0.8);
+      s += dimY(G.binFront, G.frontInner, xa, xa, xa, `ulička ${f(G.aisle)}`, fs * 0.85);
+      s += dimY(b.z, G.binFront, b.x - fs * 0.9, b.x, b.x, `${f(b.d)}`, fs * 0.8);
+    }
+    s += dimY(t + p, D - t - p, L + fs * 2.4, mx(L - t - p) , mx(L - t - p), `${f(D - 2 * (t + p))} světlá`, fs * 0.85);
+    s += '</svg>';
+    $('#svgPlan').innerHTML = s;
+  }
+
+  function drawElevations(G) {
+    const L = G.L, D = G.D, t = G.t, p = G.p, top = G.top;
+    const right = P.doorSide !== 'left';
+    const mx = (x) => (right ? x : L - x);
+    const Hd = Math.max(G.H, top);
+    const Y = (y) => Hd - y;
+
+    // ---- Nárys
+    {
+      const fs = L / 42;
+      const m = fs * 5.2;
+      const vb = [-m, -m * 1.05, L + 2 * m, Hd + m * 2.2];
+      let s = `<svg viewBox="${vb.join(' ')}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Nárys ohrádky zepředu">`;
+      const hasFront = !!G.door;
+      const run = G.runs.find((r) => r.wall === (hasFront ? 'front' : 'back'));
+      const wallPosts = hasFront ? G.wp.front : G.wp.back;
+
+      // Prkna
+      G.ys.forEach((y) => {
+        if (run) { const a = mx(run.a), b = mx(run.b); s += rect(Math.min(a, b), Y(y + G.w), Math.abs(b - a), G.w, 'sv-board'); }
+        if (hasFront) { const a = mx(L - G.door.w), b = mx(L); s += rect(Math.min(a, b), Y(y + G.w), Math.abs(b - a), G.w, 'sv-board'); }
+      });
+      // Skryté sloupky a rám
+      wallPosts.forEach((q) => { s += rect(mx(q.x) - p / 2, Y(top), p, top, 'sv-hidden'); });
+      if (hasFront) {
+        const d = G.door;
+        [d.latchV, d.hingeV].forEach((v) => { s += rect(Math.min(mx(v.x0), mx(v.x1)), Y(top), p, d.h, 'sv-hidden'); });
+        s += line(mx(d.diag.x1), Y(d.diag.y1), mx(d.diag.x2), Y(d.diag.y2), 'sv-hidden');
+        s += rect(Math.min(mx(L - d.w), mx(L)), Y(top), d.w, d.h, 'sv-thick');
+        s += `<circle cx="${mx(L - d.w + 9)}" cy="${Y(Math.min(100, top - 25))}" r="${fs * 0.45}" class="sv-thick"/>`;
+        const hy = d.hinges === 3 ? [G.g0 + 14, G.g0 + d.h / 2, top - 14] : [G.g0 + 14, top - 14];
+        hy.forEach((y) => { s += rect(Math.min(mx(L - 30), mx(L)), Y(y + 2), 30, 4, 'sv-post', 'style="fill:var(--draw-ink)"'); });
+      }
+      // Terén
+      s += line(-m * 0.6, Y(0), L + m * 0.6, Y(0), 'sv-ground');
+      for (let x = -m * 0.6; x < L + m * 0.6; x += fs * 0.9) s += line(x, Y(0) + fs * 0.9, x + fs * 0.9, Y(0), 'sv-hatch');
+
+      // Kóty: rozteče os sloupků nahoře
+      const xs = wallPosts.map((q) => mx(q.x)).sort((a, b) => a - b);
+      const yTop = Y(top) - fs * 2.2;
+      for (let i = 1; i < xs.length; i++) s += dimX(xs[i - 1], xs[i], yTop, Y(top), Y(top), f(xs[i] - xs[i - 1]), fs * 0.8);
+      // dole: pevná část + dveře, celková délka
+      const y1 = Y(0) + fs * 2.6, y2 = Y(0) + fs * 5;
+      if (hasFront) {
+        s += dimX(mx(0), mx(L - G.door.w), y1, Y(0), Y(0), f(L - G.door.w), fs);
+        s += dimX(mx(L - G.door.w), mx(L), y1, Y(0), Y(0), f(G.door.w), fs);
+      }
+      s += dimX(0, L, y2, Y(0), Y(0), f(L), fs);
+      // výška
+      s += dimY(Y(top), Y(0), -fs * 2.4, mx(0), mx(0), f(top), fs);
+      // detail prken vpravo
+      const xr = L + fs * 1.8;
+      s += dimY(Y(G.g0), Y(0), xr, L, L, f(G.g0), fs * 0.75);
+      const yb = G.ys[Math.min(1, G.ys.length - 1)];
+      s += dimY(Y(yb + G.w), Y(yb), xr + fs * 1.6, L, L, f(G.w), fs * 0.75);
+      if (G.n > 1) s += `<text x="${xr + fs * 2.6}" y="${Y(G.ys[G.ys.length - 1] + G.w / 2)}" font-size="${fs * 0.75}" class="sv-muted" transform="rotate(-90 ${xr + fs * 2.6} ${Y(G.ys[G.ys.length - 1] + G.w / 2)})" text-anchor="end">${G.n} × ${f(G.w)} + mezera ${f(G.gap, 2)}</text>`;
+      s += '</svg>';
+      $('#svgFront').innerHTML = s;
+    }
+
+    // ---- Bokorys (pravý bok; vlevo přední stěna)
+    {
+      const fs = Math.max(D, 150) / 26;
+      const m = fs * 5;
+      const X = (z) => D - z;
+      const vb = [-m, -m * 0.8, D + 2 * m, Hd + m * 1.9];
+      let s = `<svg viewBox="${vb.join(' ')}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bokorys ohrádky">`;
+      const run = G.runs.find((r) => r.wall === (right ? 'right' : 'left')) || G.runs.find((r) => r.wall === 'right' || r.wall === 'left');
+      G.ys.forEach((y) => {
+        if (run) s += rect(X(run.b), Y(y + G.w), run.len, G.w, 'sv-board');
+        // čela prken přední a zadní stěny
+        if (P.front) s += rect(X(D), Y(y + G.w), t, G.w, 'sv-board');
+        if (P.back) s += rect(X(t), Y(y + G.w), t, G.w, 'sv-board');
+      });
+      const posts = run ? G.wp[run.wall] : [];
+      posts.forEach((q) => { s += rect(X(q.z) - p / 2, Y(top), p, top, 'sv-hidden'); });
+      s += line(-m * 0.6, Y(0), D + m * 0.6, Y(0), 'sv-ground');
+      for (let x = -m * 0.6; x < D + m * 0.6; x += fs * 0.9) s += line(x, Y(0) + fs * 0.9, x + fs * 0.9, Y(0), 'sv-hatch');
+      const zs = posts.map((q) => X(q.z)).sort((a, b) => a - b);
+      for (let i = 1; i < zs.length; i++) s += dimX(zs[i - 1], zs[i], Y(top) - fs * 2, Y(top), Y(top), f(zs[i] - zs[i - 1]), fs * 0.8);
+      s += dimX(0, D, Y(0) + fs * 2.6, Y(0), Y(0), f(D), fs);
+      s += dimY(Y(top), Y(0), -fs * 2.4, 0, 0, f(top), fs);
+      s += `<text x="0" y="${Y(0) + fs * 4.6}" font-size="${fs * 0.8}" class="sv-muted">přední</text>`;
+      s += `<text x="${D}" y="${Y(0) + fs * 4.6}" font-size="${fs * 0.8}" class="sv-muted" text-anchor="end">zadní</text>`;
+      s += '</svg>';
+      $('#svgSide').innerHTML = s;
+    }
+  }
+
+  // ============================================================
+  // Materiál
+  // ============================================================
+  function cutBars(cut) {
+    return cut.groups.map((g) => {
+      const parts = g.cuts.map((c) => `<div class="piece" style="width:${(c / cut.stock) * 100}%" title="${f(c)} cm">${f(c)}</div>`).join('');
+      return `<div class="cut"><span>${g.count}×</span><div class="bar" title="zbytek ${f(g.rest)} cm">${parts}</div></div>`;
+    }).join('');
+  }
+
+  function renderMaterial(G) {
+    const bc = G.boardCut, pc = G.postCut;
+    const bmB = G.boardPieces.reduce((s, x) => s + (x.len * x.qty) / 100, 0);
+    const bmP = G.postPieces.reduce((s, x) => s + (x.len * x.qty) / 100, 0);
+    const boardRows = G.boardPieces.map((x) => `<tr><td>${esc(x.label)}</td><td class="n">${x.qty}</td><td class="n">${f(x.len)} cm</td><td class="n">${f((x.len * x.qty) / 100, 2)} m</td></tr>`).join('');
+    const postRows = G.postPieces.map((x) => `<tr><td>${esc(x.label)}</td><td class="n">${x.qty}</td><td class="n">${f(x.len)} cm</td><td class="n">${f((x.len * x.qty) / 100, 2)} m</td></tr>`).join('');
+    const hw = [
+      [`Vrut do dřeva nerez A2, ${f(G.screwLen / 10, 1)} × ${G.screwLen} mm (2 na každé křížení prkna se sloupkem, +10 %)`, `${G.screwsBuy} ks`],
+      [`Kotva sloupku ${f(G.p * 10, 0)} × ${f(G.p * 10, 0)} mm (patka do betonu nebo zemní vrut)`, `${G.posts.length} ks`],
+    ];
+    if (G.door) {
+      hw.push([`Pásový závěs, venkovní provedení`, `${G.door.hinges} ks`]);
+      hw.push([`Zástrčka nebo západka na dveře`, `1 ks`]);
+      hw.push([`Madlo / knoflík`, `1 ks`]);
+      hw.push([`Zarážka proti přirážení dveří (volitelně)`, `1 ks`]);
+    }
+    const hwRows = hw.map(([a, b]) => `<tr><td>${a}</td><td class="n">${b}</td></tr>`).join('');
+    const total = G.costB + G.costP;
+
+    $('#mat').innerHTML = `
+      <div class="mat-head">
+        <h2>Nákupní seznam</h2>
+        <div style="display:flex;gap:10px;align-items:center"><span class="copied" id="copied" aria-live="polite"></span><button class="btn primary" id="copy" type="button">Kopírovat seznam</button></div>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><span class="v">${bc.count} ks</span><span class="l">rhombus prken ${f(G.t * 10, 0)} × ${f(G.w * 10, 0)} mm à ${f(bc.stock / 100, 1)} m</span></div>
+        <div class="kpi"><span class="v">${pc.count} ks</span><span class="l">hranolů ${f(G.p * 10, 0)} × ${f(G.p * 10, 0)} mm à ${f(pc.stock / 100, 1)} m</span></div>
+        <div class="kpi"><span class="v">${G.screwsBuy}</span><span class="l">vrutů (spočteno ${G.screws})</span></div>
+        <div class="kpi"><span class="v">${kc(total)}</span><span class="l">řezivo podle příkladových cen z panelu</span></div>
+      </div>
+
+      <div class="two">
+        <section>
+          <h2>Rhombus prkna</h2>
+          <div class="tablewrap"><table>
+            <thead><tr><th>Část</th><th class="n">Kusů</th><th class="n">Délka</th><th class="n">Celkem</th></tr></thead>
+            <tbody>${boardRows}</tbody>
+            <tfoot><tr><td>Nařezaná délka</td><td></td><td></td><td class="n">${f(bmB, 1)} m</td></tr></tfoot>
+          </table></div>
+          <p class="hint">Nákup ${bc.count} × ${f(bc.stock / 100, 1)} m = ${f(bc.bought / 100, 1)} bm, odpad ${f(bc.waste * 100, 0)} %, cena ${kc(G.costB)}.${bc.splits ? ` ${bc.splits} prken je delších než skladová délka, nastavují se na sloupku.` : ''}</p>
+        </section>
+        <section>
+          <h2>Nářezový plán prken</h2>
+          <div class="cuts">${cutBars(bc)}</div>
+          <p class="hint">Každý pruh je jedno prkno ${f(bc.stock)} cm, šrafovaně zbytek. Počítá se s prořezem ${f(KERF * 10, 0)} mm.</p>
+        </section>
+      </div>
+
+      <div class="two">
+        <section>
+          <h2>Hranoly ${f(G.p, 1)} × ${f(G.p, 1)} cm</h2>
+          <div class="tablewrap"><table>
+            <thead><tr><th>Část</th><th class="n">Kusů</th><th class="n">Délka</th><th class="n">Celkem</th></tr></thead>
+            <tbody>${postRows}</tbody>
+            <tfoot><tr><td>Nařezaná délka</td><td></td><td></td><td class="n">${f(bmP, 1)} m</td></tr></tfoot>
+          </table></div>
+          <p class="hint">Nákup ${pc.count} × ${f(pc.stock / 100, 1)} m = ${f(pc.bought / 100, 1)} bm, odpad ${f(pc.waste * 100, 0)} %, cena ${kc(G.costP)}.</p>
+        </section>
+        <section>
+          <h2>Nářezový plán hranolů</h2>
+          <div class="cuts">${cutBars(pc)}</div>
+        </section>
+      </div>
+
+      <section>
+        <h2>Kování a spojovací materiál</h2>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Položka</th><th class="n">Množství</th></tr></thead>
+          <tbody>${hwRows}</tbody>
+        </table></div>
+      </section>
+
+      <section>
+        <h2>Postup stavby</h2>
+        <ol class="steps">
+          <li>Vytyčte obdélník ${f(G.L)} × ${f(G.D)} cm a srovnejte podklad (dlažba nebo štěrk).</li>
+          <li>Osaďte ${G.posts.length} kotev podle půdorysu, rozteče os sloupků najdete v nárysu. Rohové sloupky stojí ${f(G.t + G.p / 2)} cm od vnější hrany.</li>
+          <li>Přišroubujte sloupky ${f(G.top)} cm a zkontrolujte svislost vodováhou.</li>
+          <li>Prkna montujte odspodu, první ${f(G.g0)} cm nad terénem, mezera ${f(G.gap, 2)} cm (vložte distanční lať). Šikmé hrany rhombusu otočte tak, aby horní hrana padala ven a voda odtékala.</li>
+          <li>Dveře sestavte naplocho: dvě svislice, šikmá vzpěra od spodního závěsu k hornímu rohu u zámku, pak prkna. Zavěste je na rohový sloupek.</li>
+        </ol>
+      </section>`;
+
+    $('#copy').addEventListener('click', () => copyList(G));
+  }
+
+  function listText(G) {
+    const bc = G.boardCut, pc = G.postCut;
+    const L = [];
+    L.push(`OHRÁDKA NA POPELNICE ${f(G.L)} × ${f(G.D)} × ${f(G.top)} cm`);
+    L.push('');
+    L.push(`Rhombus prkna ${f(G.t * 10, 0)} × ${f(G.w * 10, 0)} mm: ${bc.count} ks à ${f(bc.stock / 100, 1)} m (${f(bc.bought / 100, 1)} bm)`);
+    G.boardPieces.forEach((x) => L.push(`  - ${x.label}: ${x.qty} × ${f(x.len)} cm`));
+    L.push(`Hranol ${f(G.p * 10, 0)} × ${f(G.p * 10, 0)} mm: ${pc.count} ks à ${f(pc.stock / 100, 1)} m (${f(pc.bought / 100, 1)} bm)`);
+    G.postPieces.forEach((x) => L.push(`  - ${x.label}: ${x.qty} × ${f(x.len)} cm`));
+    L.push(`Vruty nerez ${f(G.screwLen / 10, 1)} × ${G.screwLen} mm: ${G.screwsBuy} ks`);
+    L.push(`Kotvy sloupků: ${G.posts.length} ks`);
+    if (G.door) L.push(`Závěsy: ${G.door.hinges} ks, zástrčka 1 ks, madlo 1 ks`);
+    return L.join('\n');
+  }
+
+  function copyList(G) {
+    const txt = listText(G);
+    const done = (msg) => { const el = $('#copied'); if (el) el.textContent = msg; };
+    try {
+      navigator.clipboard.writeText(txt).then(() => done('Zkopírováno do schránky'), () => fallback());
+    } catch (e) { fallback(); }
+    function fallback() {
+      const ta = document.createElement('textarea');
+      ta.value = txt;
+      ta.style.cssText = 'width:100%;height:160px;font:12px var(--font-mono)';
+      ta.readOnly = true;
+      $('#mat').prepend(ta);
+      ta.select();
+      done('Text je označený, zkopírujte ho Ctrl+C');
+    }
+  }
+
+  // ============================================================
+  // UI
+  // ============================================================
+  function renderSummary(G) {
+    const total = G.costB + G.costP;
+    $('#summary').innerHTML = [
+      `<span class="chip"><b>${f(G.L)} × ${f(G.D)} × ${f(G.top)}</b> cm</span>`,
+      `<span class="chip"><b>${G.n}</b> prken v řadě</span>`,
+      `<span class="chip"><b>${G.posts.length}</b> sloupků</span>`,
+      `<span class="chip"><b>${G.boardCut.count}</b> prken à ${f(G.boardCut.stock / 100, 1)} m</span>`,
+      `<span class="chip">řezivo <b>~${kc(total)}</b></span>`,
+    ].join('');
+    const label = { ok: 'OK', warn: 'Pozor', bad: 'Chyba' };
+    $('#checks').innerHTML = G.checks
+      .slice()
+      .sort((a, b) => ['bad', 'warn', 'ok'].indexOf(a[0]) - ['bad', 'warn', 'ok'].indexOf(b[0]))
+      .map(([k, s]) => `<li><span class="pill ${k}">${label[k]}</span><span>${esc(s)}</span></li>`)
+      .join('');
+  }
+
+  function renderBinTypes() {
+    const n = Math.max(0, Math.min(8, Math.round(+P.binCount)));
+    const opts = BIN_TYPES.map((b, i) => `<option value="${i}">${b.n}</option>`).join('');
+    let h = '';
+    for (let i = 0; i < n; i++) {
+      h += `<div class="row"><label for="f-bin${i}">Popelnice ${i + 1}</label><select id="f-bin${i}" data-bin="${i}">${opts}</select></div>`;
+    }
+    $('#binTypes').innerHTML = h;
+    $('#binTypes').querySelectorAll('select').forEach((sel) => {
+      const i = +sel.dataset.bin;
+      sel.value = String(P.binTypes[i] || 0);
+      sel.addEventListener('change', () => {
+        P.binTypes[i] = +sel.value;
+        update();
+      });
+    });
+  }
+
+  function syncFields() {
+    document.querySelectorAll('[data-k]').forEach((el) => {
+      const k = el.dataset.k;
+      if (el.type === 'checkbox') el.checked = !!P[k];
+      else el.value = P[k];
+    });
+    $('#f-door').value = P.door;
+    $('#doorOut').textContent = `${P.door}°`;
+    renderBinTypes();
+  }
+
+  let G = null;
+  let pending = false;
+  function update() {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(() => {
+      pending = false;
+      G = derive(P);
+      renderSummary(G);
+      build3D(G);
+      drawPlan(G);
+      drawElevations(G);
+      renderMaterial(G);
+      save();
+    });
+  }
+
+  function bindFields() {
+    const sel = $('#f-wood');
+    sel.innerHTML = Object.entries(WOODS).map(([k, v]) => `<option value="${k}">${v.n}</option>`).join('');
+    document.querySelectorAll('[data-k]').forEach((el) => {
+      const k = el.dataset.k;
+      const read = (commit) => {
+        if (el.type === 'checkbox') { P[k] = el.checked; return true; }
+        if (el.type === 'number') {
+          let v = parseFloat(el.value);
+          const min = parseFloat(el.min), max = parseFloat(el.max);
+          if (isNaN(v)) { if (commit) el.value = P[k]; return false; }
+          if (v < min || v > max) {
+            if (!commit) return false;
+            v = Math.min(max, Math.max(min, v));
+            el.value = v;
+          }
+          P[k] = v;
+          return true;
+        }
+        P[k] = k === 'binVol' ? +el.value : el.value;
+        return true;
+      };
+      el.addEventListener('input', () => { if (read(false)) { if (k === 'binCount') renderBinTypes(); update(); } });
+      el.addEventListener('change', () => { if (read(true)) { if (k === 'binCount') renderBinTypes(); update(); } });
+    });
+    $('#f-door').addEventListener('input', (e) => {
+      P.door = +e.target.value;
+      $('#doorOut').textContent = `${P.door}°`;
+      setDoorAngle(P.door);
+      if (G) drawPlan(G);
+      save();
+    });
+    $('#reset').addEventListener('click', () => {
+      P = JSON.parse(JSON.stringify(DEFAULTS));
+      syncFields();
+      update();
+    });
+    document.querySelectorAll('[data-cam]').forEach((b) => b.addEventListener('click', () => setCam(b.dataset.cam)));
+  }
+
+  const TABS = ['3d', 'pudorys', 'narys', 'material'];
+  function showTab(name) {
+    if (!TABS.includes(name)) name = '3d';
+    activeTab = name;
+    TABS.forEach((tn) => {
+      $('#t-' + tn).setAttribute('aria-selected', String(tn === name));
+      $('#t-' + tn).tabIndex = tn === name ? 0 : -1;
+      $('#v-' + tn).hidden = tn !== name;
+    });
+    if (name === '3d') resize3D();
+    try { localStorage.setItem(STORE_KEY + '-tab', name); } catch (e) { /* ignore */ }
+  }
+  function bindTabs() {
+    document.querySelectorAll('.tab').forEach((b) => {
+      b.addEventListener('click', () => showTab(b.dataset.tab));
+      b.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        const i = TABS.indexOf(b.dataset.tab);
+        const next = TABS[(i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length];
+        showTab(next);
+        $('#t-' + next).focus();
+      });
+    });
+    let start = (location.hash || '').replace('#', '');
+    if (!TABS.includes(start)) {
+      try { start = localStorage.getItem(STORE_KEY + '-tab') || '3d'; } catch (e) { start = '3d'; }
+    }
+    showTab(start);
+  }
+
+  function watchTheme() {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const on = () => applyTheme3D();
+    if (mq.addEventListener) mq.addEventListener('change', on);
+    new MutationObserver(on).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class', 'style'] });
+  }
+
+  // ============================================================
+  // Start
+  // ============================================================
+  bindFields();
+  syncFields();
+  if (window.THREE && THREE.OrbitControls) init3D();
+  else $('#v-3d').insertAdjacentHTML('afterbegin', '<p class="gl-error">3D knihovnu se nepodařilo načíst. Výkresy a materiál fungují dál.</p>');
+  G = derive(P);
+  bindTabs();
+  watchTheme();
+  update();
+  if (has3D) {
+    // kamera až po prvním výpočtu (cílí mírně před ohrádku kvůli dveřím)
+    requestAnimationFrame(() => setCam('iso'));
+  }
+})();
+</script>
+</body>
+</html>
