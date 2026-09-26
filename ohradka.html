@@ -663,8 +663,7 @@
       const d = {
         w: dw,
         h: G.top - g0,
-        // rám křídla končí 1 cm pod horním věncem (věnec vede i nad dveřmi)
-        fh: (P.ring ? G.top - p - 1 : G.top) - g0,
+        fh: G.top - g0, // nad dveřmi věnec nevede, rám jde na plnou výšku
         // doraz: lať 3 × 5 cm na boku zámkového sloupku, křídlo na ni dosedá 2 cm
         stop: { x0: L - dw - DOOR_GAP, x1: L - dw + 2 },
         latchV: { x0: L - dw + 2.5, x1: L - dw + 2.5 + p },
@@ -689,9 +688,12 @@
     const backInRing = ring && (P.back || (nr >= 1 && +P.railTop >= G.top));
     const yRing = G.top - p;
     if (ring) {
-      G.rails.push({ label: 'Věnec, přední (i nad dveřmi)', axis: 'x', a0: t, a1: L - t, c: zF, y0: yRing, ring: true });
+      // vpředu jen po zámkový sloupek, nad dveřmi trám není (volný průchod)
+      const frontEnd = P.front ? L - G.doorW - DOOR_GAP : L - t;
+      G.rails.push({ label: P.front ? 'Věnec, přední (po dveře)' : 'Věnec, přední', axis: 'x', a0: t, a1: frontEnd, c: zF, y0: yRing, ring: true });
       G.rails.push({ label: 'Věnec, levý bok', axis: 'z', a0: zB - p / 2, a1: zF - p / 2, c: xL, y0: yRing, ring: true });
-      G.rails.push({ label: 'Věnec, pravý bok', axis: 'z', a0: zB - p / 2, a1: zF - p / 2, c: xR, y0: yRing, ring: true });
+      // u dveří boční trám přechází přes celý sloupek se závěsy
+      G.rails.push({ label: 'Věnec, pravý bok', axis: 'z', a0: zB - p / 2, a1: P.front ? zF + p / 2 : zF - p / 2, c: xR, y0: yRing, ring: true });
       if (backInRing) G.rails.push({ label: 'Věnec, zadní', axis: 'x', a0: xL + p / 2, a1: xR - p / 2, c: zB, y0: yRing, ring: true });
     }
     if (nr >= 1 && !backInRing) G.rails.push({ label: 'Zadní vodorovný trám, horní', axis: 'x', a0: xL + p / 2, a1: xR - p / 2, c: zB, y0: Math.min(+P.railTop, G.top) - p });
@@ -706,7 +708,7 @@
       q.h = underRing ? yRing : G.top;
     });
     G.postH = ring ? yRing : G.top;
-    G.ringJoints = ring ? 2 + (backInRing ? 2 : 0) : 0;
+    G.ringJoints = ring ? (P.front ? 1 : 2) + (backInRing ? 2 : 0) : 0;
     G.ringPosts = posts.filter((q) => q.h < G.top).length;
 
     // --- Popelnice
@@ -760,8 +762,7 @@
       if (G.top >= spec.h + 5) ok(`Stěny ${f(G.top)} cm zakryjí popelnice (${spec.h} cm). Bez střechy jdou víka otevřít uvnitř.`);
       else warn(`Popelnice (${spec.h} cm) budou vyčnívat nad stěny (${f(G.top)} cm).`);
     }
-    if (ring) ok(`Horní věnec spojuje všechny sloupky nahoře, i sloupek se závěsy přes trám nad dveřmi.`);
-    if (ring && G.door) warn(`Nad dveřmi vede horní trám, průchozí výška je ${f(G.top - p)} cm. Při vstupu dovnitř se sehnete.`);
+    if (ring) ok(G.door ? `Horní věnec spojuje sloupky nahoře. Nad dveřmi trám není, průchod je na plnou výšku ${f(G.top)} cm.` : `Horní věnec spojuje všechny sloupky nahoře.`);
     if (!P.back) {
       if (G.backRails.length) ok(`Zadní rohové sloupky spojuje ${G.backRails.length === 2 ? 'horní a spodní trám' : 'jeden trám'}, bok u dveří má vzadu oporu.`);
       else bad(`Zadní konce boků nic nespojuje. Bok u dveří pak stojí jen na dvou sloupcích a bude se viklat. Přidejte vodorovný trám vzadu.`);
@@ -1461,11 +1462,11 @@
           <li>Vytyčte obdélník ${f(G.L)} × ${f(G.D)} cm a srovnejte podklad (dlažba nebo štěrk).</li>
           <li>Osaďte ${G.posts.length} kotev podle půdorysu, rozteče os sloupků najdete v nárysu. Osy rohových sloupků jsou ${f(G.t + G.p / 2)} cm od vnější hrany prken${P.back ? '' : ', zadní rohové sloupky stojí těsně u plotu'}.</li>
           <li>Přišroubujte sloupky ${f(G.postH)} cm${G.postH < G.top ? ` (na ně přijde věnec do výšky ${f(G.top)} cm)` : ''} a zkontrolujte svislost vodováhou.</li>
-          ${G.ringPosts ? `<li>Na sloupky položte horní věnec 5 × 5 cm: vpředu jeden trám ${f(L_ring(G, 'x', G.D - G.t - G.p / 2))} cm přes celou délku i nad dveřmi, na bocích ${f(L_ring(G, 'z', G.t + G.p / 2))} cm${G.rails.some((r) => r.ring && r.axis === 'x' && Math.abs(r.c - G.zB) < 0.01) ? `, vzadu ${f(L_ring(G, 'x', G.zB))} cm` : ''}. Přišroubujte ho shora vruty 6 × 100 mm do každého sloupku.</li>` : ''}
+          ${G.ringPosts ? `<li>Na sloupky položte horní věnec 5 × 5 cm: vpředu ${f(L_ring(G, 'x', G.D - G.t - G.p / 2))} cm${G.door ? ' od rohu po zámkový sloupek (nad dveřmi trám není)' : ''}, na levém boku ${f(L_ring(G, 'z', G.t + G.p / 2))} cm, na pravém ${f(L_ring(G, 'z', G.L - G.t - G.p / 2))} cm${G.door ? ' přes celý sloupek se závěsy' : ''}${G.rails.some((r) => r.ring && r.axis === 'x' && Math.abs(r.c - G.zB) < 0.01) ? `, vzadu ${f(L_ring(G, 'x', G.zB))} cm` : ''}. Přišroubujte ho shora vruty 6 × 100 mm do každého sloupku.</li>` : ''}
           ${G.rails.filter((r) => !r.ring).length ? `<li>Zadní rohové sloupky spojte ${G.rails.filter((r) => !r.ring).map((r) => r.y0 > G.g0 + 1 ? `horním trámem ve výšce ${f(r.y0 + G.p)} cm` : 'spodním trámem').join(' a ')} přes úhelníky.</li>` : ''}
           <li>Prkna montujte odspodu, první ${f(G.g0)} cm nad terénem, mezera ${f(G.gap, 2)} cm (vložte distanční lať). Šikmé hrany rhombusu otočte tak, aby horní hrana padala ven a voda odtékala.</li>
           <li>Na bok zámkového sloupku přišroubujte lať 3 × 5 cm jako doraz. Dveře na ni dosednou a nezatěžují závěsy, když do nich někdo zatlačí zevnitř.</li>
-          <li>Dveře sestavte naplocho: rám ze dvou svislic a dvou příček ${f(G.door ? G.door.fh : 0)} cm vysoký, šikmá vzpěra od spodního závěsu k hornímu rohu u zámku, pak prkna až do výšky ${f(G.top)} cm, horní prkno přesahuje přes věnec. Závěsy přišroubujte protikusem na bok stěny, vruty až do rohového sloupku.</li>
+          <li>Dveře sestavte naplocho: rám ze dvou svislic a dvou příček ${f(G.door ? G.door.fh : 0)} cm vysoký, šikmá vzpěra od spodního závěsu k hornímu rohu u zámku, pak prkna. Závěsy přišroubujte protikusem na bok stěny, vruty až do rohového sloupku.</li>
         </ol>
       </section>`;
 
