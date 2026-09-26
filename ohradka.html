@@ -413,6 +413,8 @@
       <legend>Konstrukce</legend>
       <div class="row"><label for="f-post">Hranol (průřez)</label><div class="num"><input id="f-post" data-k="post" type="number" min="3" max="12" step="0.5"><span>cm</span></div></div>
       <div class="row"><label for="f-maxSpan">Max. rozteč sloupků</label><div class="num"><input id="f-maxSpan" data-k="maxSpan" type="number" min="30" max="200" step="5"><span>cm</span></div></div>
+      <div class="row"><label for="f-backPosts">Sloupky na zadní stěně</label><div class="num"><input id="f-backPosts" data-k="backPosts" type="number" min="0" max="12" step="1"><span>ks</span></div></div>
+      <p class="hint">Počet včetně rohových. 0 = rozmístit podle max. rozteče.</p>
       <div class="checks-row" role="group" aria-label="Opláštěné strany">
         <label for="f-back"><input id="f-back" data-k="back" type="checkbox"> Zadní</label>
         <label for="f-left"><input id="f-left" data-k="left" type="checkbox"> Levá</label>
@@ -530,7 +532,7 @@
     L: 358, D: 154, H: 160,
     doorW: 118, doorSide: 'right', door: 30,
     bw: 8, bt: 1.8, gap: 1, fit: true, g0: 3, wood: 'smrk',
-    post: 5, maxSpan: 80,
+    post: 5, maxSpan: 80, backPosts: 4,
     back: true, left: true, right: true, front: true,
     binCount: 4, binVol: 240, binTypes: [0, 1, 2, 3, 4, 5, 0, 1],
     stockB: 400, priceB: 49, stockP: 400, priceP: 35,
@@ -605,7 +607,11 @@
       return Array.from({ length: k + 1 }, (_, i) => a + (i * (b - a)) / k);
     };
     const wp = { back: [], front: [], left: [], right: [] };
-    if (P.back) wp.back = dist(xL, xR).map((x) => ({ x, z: zB }));
+    if (P.back) {
+      const nbp = Math.round(+P.backPosts || 0);
+      const xs = nbp >= 2 ? Array.from({ length: nbp }, (_, i) => xL + (i * (xR - xL)) / (nbp - 1)) : dist(xL, xR);
+      wp.back = xs.map((x) => ({ x, z: zB }));
+    }
     if (P.left) wp.left = dist(zB, zF).map((z) => ({ x: xL, z }));
     if (P.right) wp.right = dist(zB, zF).map((z) => ({ x: xR, z }));
     if (P.front) {
@@ -624,12 +630,15 @@
     G.posts = posts;
     G.wp = wp;
 
-    let maxSp = 0;
-    const spans = (arr, key) => {
-      for (let i = 1; i < arr.length; i++) maxSp = Math.max(maxSp, Math.abs(arr[i][key] - arr[i - 1][key]));
+    let maxSp = 0, maxWall = '';
+    const spans = (arr, key, name) => {
+      for (let i = 1; i < arr.length; i++) {
+        const d = Math.abs(arr[i][key] - arr[i - 1][key]);
+        if (d > maxSp + 0.05) { maxSp = d; maxWall = name; }
+      }
     };
-    spans(wp.back, 'x'); spans(wp.left, 'z'); spans(wp.right, 'z');
-    spans(wp.front.slice(0, -1), 'x');
+    spans(wp.back, 'x', 'zadní stěna'); spans(wp.left, 'z', 'levý bok'); spans(wp.right, 'z', 'pravý bok');
+    spans(wp.front.slice(0, -1), 'x', 'přední stěna');
     G.maxSpacing = maxSp;
 
     // --- Úseky opláštění
@@ -696,9 +705,10 @@
       if (G.top >= spec.h + 5) ok(`Stěny ${f(G.top)} cm zakryjí popelnice (${spec.h} cm). Bez střechy jdou víka otevřít uvnitř.`);
       else warn(`Popelnice (${spec.h} cm) budou vyčnívat nad stěny (${f(G.top)} cm).`);
     }
-    if (+P.maxSpan <= 80) ok(`Rozteč sloupků nejvýš ${f(maxSp)} cm, prkno ${f(t * 10, 0)} mm se neprohne.`);
-    else if (+P.maxSpan <= 100) warn(`Rozteč až ${f(maxSp)} cm je pro prkno ${f(t * 10, 0)} mm na hraně, může se prohýbat a kroutit. Doporučeno do 80 cm.`);
-    else bad(`Rozteč ${f(maxSp)} cm je pro prkno ${f(t * 10, 0)} mm příliš velká. Snižte max. rozteč na 80 cm.`);
+    const where = maxWall ? ` (${maxWall})` : '';
+    if (maxSp <= 100) ok(`Rozteč sloupků nejvýš ${f(maxSp)} cm${where}, prkno ${f(t * 10, 0)} mm drží rovně.`);
+    else if (maxSp <= 120) warn(`Rozteč ${f(maxSp)} cm${where} je pro prkno ${f(t * 10, 0)} mm ještě použitelná, prkna se ale mohou mírně vlnit. Do 1 m je to jisté.`);
+    else bad(`Rozteč ${f(maxSp)} cm${where} je pro prkno ${f(t * 10, 0)} mm moc velká, prkna se budou kroutit. Přidejte sloupek.`);
     if (doorClamped) bad(`Dveře ${f(+P.doorW)} cm se do přední stěny nevejdou, model je zkrátil na ${f(G.doorW)} cm.`);
     else if (P.front && G.doorW > 120) warn(`Křídlo širší než 120 cm je těžké a časem poklesne. Zvažte dvoukřídlé dveře.`);
     if (!P.fit && H - G.top > 0.5) warn(`Horní hrana vyjde na ${f(G.top)} cm, o ${f(H - G.top)} cm níž než zadaná výška. Zapněte dorovnání mezer.`);
